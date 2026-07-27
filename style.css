@@ -81,6 +81,13 @@
   font-size: 0.8em; font-weight: 600;
 }
 
+/* Image links (the logo on the title slide) shouldn't get the theme's dashed
+   underline. Needs to out-specify `.slidev-layout a`. */
+.slidev-layout a.brand-logo-link {
+  border-bottom: none;
+  text-decoration: none;
+}
+
 /* Small Bronto wordmark used in slide corners */
 .brand-mark {
   font-family: 'Source Serif 4', Georgia, serif;

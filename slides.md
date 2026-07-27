@@ -26,7 +26,9 @@ fonts:
 
 <div class="subtitle">Levels of Service Reliability Automation</div>
 
-<img src="/img/bronto-logo.webp" class="abs-bl m-10 brand-logo" />
+<a href="https://bronto.io" target="_blank" rel="noopener" class="abs-bl m-10 brand-logo-link">
+  <img src="/img/bronto-logo.webp" class="brand-logo" />
+</a>
 
 <style>
 .title-hero { position: relative; display: inline-block; }
@@ -35,6 +37,8 @@ fonts:
 .confetti { position: absolute; width: 118px; height: auto; pointer-events: none; }
 .c-left { top: -78px; left: -18px; }
 .c-right { top: 30%; right: -158px; transform: translateY(-50%); }
+.brand-logo-link { display: inline-block; line-height: 0; transition: opacity 0.15s ease; }
+.brand-logo-link:hover { opacity: 0.7; }
 .brand-logo { width: 150px; height: auto; }
 </style>
 
