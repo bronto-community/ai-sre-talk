@@ -216,17 +216,20 @@ layout: center
 class: text-center
 ---
 
-<div class="cta">
-  <img src="/img/dino-blocks.png" class="cta-dino" />
-  <div class="cta-body">
-    <div class="cta-kicker">An early ask</div>
-    <h2 class="cta-title">Shape the CNCF white&nbsp;paper</h2>
-    <p class="cta-sub">This talk reflects a paper we're actively writing. Contributors very welcome.</p>
-    <a class="cta-link" href="https://github.com/cncf/toc/issues/1984" target="_blank">
-      github.com/cncf/toc/issues/1984
-    </a>
+<!-- the van drives through first; the card lands once it's clear -->
+<RevealAfter :delay="2250">
+  <div class="cta">
+    <img src="/img/dino-blocks.png" class="cta-dino" />
+    <div class="cta-body">
+      <div class="cta-kicker">An early ask</div>
+      <h2 class="cta-title">Shape the CNCF white&nbsp;paper</h2>
+      <p class="cta-sub">This talk reflects a paper we're actively writing. Contributors very welcome.</p>
+      <a class="cta-link" href="https://github.com/cncf/toc/issues/1984" target="_blank">
+        github.com/cncf/toc/issues/1984
+      </a>
+    </div>
   </div>
-</div>
+</RevealAfter>
 
 <VanDrive mode="through" />
 
