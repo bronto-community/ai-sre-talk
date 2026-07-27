@@ -326,11 +326,21 @@ clicks: 5
 
 # Example: Scaling a service
 
-<Ladder domain="resource-mgmt" :stage="$clicks" class="mt-2" />
+<ScaleTheService :stage="$clicks" class="mt-2" />
 
 <!--
-Climb one rung at a time with the ▲ button (or reveal all with ↥).
-The jump to L4 is where ML earns its keep: load + errors + latency + seasonality.
+Same 25s curve every run — rehearse against it. Arrows change LEVEL, not time.
+Counters reset per level, so the numbers compare directly.
+
+L0  you click +1/-1 while talking, and you WILL fall behind. That's the point.
+L1  one click, right size — still your attention.
+L2  watch it lag the ramp, one instance at a time.
+L3  right size, but only after load moved — then the collapse at t≈18 fools it
+    into scaling down and the rebound catches it out.
+L4  it asks. Miss it mid-sentence and errors climb. Press `a` to approve.
+L5  same moment, no question, holds through the collapse. Nothing left to press.
+
+Watch "your clicks" go ~20 → 0 as you climb.
 -->
 
 ---
