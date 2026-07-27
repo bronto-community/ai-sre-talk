@@ -44,6 +44,22 @@ Not here to trash "AI SRE" — cautious optimist.
 -->
 
 ---
+layout: center
+---
+
+<SectionCard
+  kicker="Part one"
+  title="Setting the scene"
+  art="/img/dino-blocks.png"
+>
+  <div class="sc-list">
+    <span>What people mean by "AI SRE"</span>
+    <span>Why that's a narrow slice</span>
+    <span>What self-driving cars are actually made of</span>
+  </div>
+</SectionCard>
+
+---
 clicks: 5
 ---
 
@@ -240,7 +256,7 @@ layout: center
 ---
 
 <SectionCard
-  kicker="Part one"
+  kicker="Part two"
   title="Levels of Service Reliability Automation"
   art="/img/dino-space.png"
 >
@@ -286,28 +302,16 @@ layout: center
 ---
 
 <SectionCard
-  kicker="Part two"
+  kicker="Part three"
   title="Examples"
   art="/img/dino-scientist.png"
 >
-  <div class="ex-teaser">
+  <div class="sc-list">
     <span>Scaling a service</span>
     <span>Instrumentation</span>
     <span>Incidents</span>
   </div>
 </SectionCard>
-
-<style>
-.ex-teaser { display: flex; flex-direction: column; gap: 0.55rem; }
-.ex-teaser span {
-  font-size: 1.15rem; color: var(--ink-dim);
-  padding-left: 1.1rem; position: relative;
-}
-.ex-teaser span::before {
-  content: ''; position: absolute; left: 0; top: 0.55em;
-  width: 7px; height: 7px; border-radius: 50%; background: var(--mint);
-}
-</style>
 
 ---
 clicks: 5

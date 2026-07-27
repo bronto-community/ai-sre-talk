@@ -61,6 +61,17 @@
 
 .draft-note { font-size: 1.25rem; line-height: 1.4; color: var(--ink-dim); font-style: italic; }
 
+/* "what this chapter covers" list, used inside SectionCard */
+.sc-list { display: flex; flex-direction: column; gap: 0.55rem; }
+.sc-list span {
+  position: relative; padding-left: 1.1rem;
+  font-size: 1.15rem; color: var(--ink-dim);
+}
+.sc-list span::before {
+  content: ''; position: absolute; left: 0; top: 0.55em;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--mint);
+}
+
 .font-hand { font-family: 'Kalam', cursive; }
 
 /* Pill tag (bronto.io hero style) */
