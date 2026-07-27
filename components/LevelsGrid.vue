@@ -98,7 +98,6 @@ watch(expanded, () => nextTick(measure))
              doesn't move when the box expands upward. The box itself is click-through. -->
         <button class="cb-tag" @click="expanded = !expanded">
           <span class="cb-label">“AI SRE”</span>
-          <span class="cb-hint">{{ expanded ? '↑ …now prevention too' : 'click to expand ↑' }}</span>
         </button>
       </div>
     </div>
@@ -186,8 +185,7 @@ watch(expanded, () => nextTick(measure))
   transition: background 0.15s ease;
 }
 .cb-tag:hover { background: var(--cream); }
-.cb-label { font-family: 'Source Serif 4', Georgia, serif; font-weight: 600; font-size: 1rem; color: #9c2a10; }
-.cb-hint { font-size: 0.68rem; color: var(--claim); font-weight: 600; }
+.cb-label { font-family: 'Source Serif 4', Georgia, serif; font-weight: 600; font-size: 1.05rem; color: #9c2a10; }
 
 .detail { border: 1px solid var(--panel-border); background: var(--panel); border-radius: 10px; padding: 0.55rem 0.9rem; min-height: 3rem; }
 .detail.hint { color: var(--ink-dim); font-size: 0.85rem; }

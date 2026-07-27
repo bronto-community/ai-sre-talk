@@ -490,7 +490,9 @@ watch(boom, v => { if (v) nextTick(drawBoom) })
       <span v-else-if="mode === 'manual'" class="dim">turn the wheel to get from <b>A</b> to <b>B</b></span>
       <span v-else-if="mode === 'arrived'" class="punch">Made it — all the way to B.</span>
       <span v-else-if="mode === 'auto'" class="dim">…so far, so good.</span>
-      <span v-else class="punch">It was fine — right up until the next bend.</span>
+      <span v-else class="punch apology">
+        You're absolutely right — I should not have driven off the road.
+      </span>
       <span v-if="splatCount" class="toll">{{ splatCount }} frog{{ splatCount > 1 ? 's' : '' }} flattened</span>
     </div>
   </div>
@@ -533,7 +535,7 @@ watch(boom, v => { if (v) nextTick(drawBoom) })
 .car { position: absolute; will-change: left, top, transform; z-index: 2; }
 .car svg { display: block; height: auto; }
 
-.picker { position: absolute; left: 2%; bottom: 62px; }
+.picker { position: absolute; left: 2%; bottom: 78px; }
 .picker-title {
   font-family: 'Kalam', cursive; font-size: 1rem; color: var(--ink-dim); margin-bottom: 0.4rem;
 }
@@ -559,11 +561,14 @@ watch(boom, v => { if (v) nextTick(drawBoom) })
 .wheel-driver.bot { color: var(--sapphire); }
 
 .caption {
-  position: absolute; left: 2%; bottom: 14px;
-  display: flex; align-items: center; gap: 0.8rem; font-size: 1.05rem;
+  position: absolute; left: 2%; bottom: 14px; right: 190px;
+  display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap;
+  font-size: 1.05rem;
 }
 .caption b { color: var(--sapphire); font-family: 'Kalam', cursive; font-size: 1.2rem; }
 .dim { color: var(--ink-dim); }
 .punch { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.5rem; }
+/* the LLM's mea culpa runs long — size it to fit on one line */
+.punch.apology { font-size: 1.2rem; font-style: italic; color: var(--ink-dim); }
 .toll { font-family: 'Kalam', cursive; font-size: 0.95rem; color: #9c2a10; }
 </style>

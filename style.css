@@ -59,7 +59,7 @@
 /* Long content never overflows the beamer: it scrolls inside its box. */
 .fit-scroll { max-height: 78vh; overflow: auto; }
 
-.draft-note { font-size: 0.72em; color: var(--ink-dim); font-style: italic; }
+.draft-note { font-size: 1.25rem; line-height: 1.4; color: var(--ink-dim); font-style: italic; }
 
 .font-hand { font-family: 'Kalam', cursive; }
 
