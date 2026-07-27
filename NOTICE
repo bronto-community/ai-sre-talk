@@ -1,0 +1,49 @@
+# Notices, trademarks and third-party material
+
+Copyright (c) 2026 Severin Neumann.
+
+This repository is dual-licensed:
+
+- **Presentation content** — `slides.md`, `OUTLINE.md`, `ABSTRACT.md` and the
+  prose in this repository — is licensed under the Creative Commons
+  Attribution 4.0 International License (CC BY 4.0). See [LICENSE](LICENSE).
+- **Source code** — the Vue components in `components/`, `data.ts`,
+  `style.css` and the build configuration — is licensed under the MIT License.
+  See [LICENSE-CODE](LICENSE-CODE).
+
+## Trademarks
+
+**The licenses above do not grant any rights to use trademarks, service marks,
+trade names, logos, or product names.** Section 2(b)(2) of CC BY 4.0 expressly
+excludes trademark rights from the license grant, and the MIT license grants
+rights in software only.
+
+The following marks appear in this repository and are **excluded from both
+licenses**. They remain the property of their respective owners and are used
+here for identification and illustrative purposes only:
+
+| Mark / asset | Owner |
+| --- | --- |
+| "Bronto", the Bronto wordmark and the Bronto dinosaur character and logo — `public/img/bronto-logo.webp`, `public/img/bronto-dino.png`, `public/img/bronto-sitting.webp` | Bronto |
+| Amazon Web Services, AWS and the AWS logo — `public/img/logo-aws.svg` | Amazon Technologies, Inc. |
+| GitHub and the GitHub logo — `public/img/logo-github.svg` | GitHub, Inc. |
+| Kubernetes and the Kubernetes logo — `public/img/logo-k8s.svg` | The Linux Foundation |
+| SAE and "SAE J3016" (referenced as the source of the levels-of-driving-automation analogy) | SAE International |
+| CNCF and Cloud Native Computing Foundation | The Linux Foundation |
+
+If you reuse this material under CC BY 4.0 or MIT, **you must remove or
+replace these logos and marks**, or obtain permission from their owners
+separately. Nothing here implies endorsement of, affiliation with, or
+sponsorship by any of the above.
+
+## Illustrations
+
+The dinosaur illustrations (`public/img/dino-*.png`, `public/img/confetti-*.png`)
+are Bronto brand assets and are likewise **not** covered by the licenses above.
+
+## Disclaimer
+
+This presentation reflects the personal views of the author at the time of
+writing. It references an in-progress CNCF white paper draft; the paper is
+evolving and not final, and any errors or opinions here are the author's own
+and do not represent the position of Bronto, the CNCF, or the Linux Foundation.
