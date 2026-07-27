@@ -236,10 +236,16 @@ class: text-center
 </style>
 
 ---
-layout: section
+layout: center
 ---
 
-# Levels of Service Reliability Automation
+<SectionCard
+  kicker="Part one"
+  title="Levels of Service Reliability Automation"
+  art="/img/dino-space.png"
+>
+  <LevelChips />
+</SectionCard>
 
 ---
 clicks: 6
@@ -276,10 +282,32 @@ deliberately unset.
 -->
 
 ---
-layout: section
+layout: center
 ---
 
-# Examples
+<SectionCard
+  kicker="Part two"
+  title="Examples"
+  art="/img/dino-scientist.png"
+>
+  <div class="ex-teaser">
+    <span>Scaling a service</span>
+    <span>Instrumentation</span>
+    <span>Incidents</span>
+  </div>
+</SectionCard>
+
+<style>
+.ex-teaser { display: flex; flex-direction: column; gap: 0.55rem; }
+.ex-teaser span {
+  font-size: 1.15rem; color: var(--ink-dim);
+  padding-left: 1.1rem; position: relative;
+}
+.ex-teaser span::before {
+  content: ''; position: absolute; left: 0; top: 0.55em;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--mint);
+}
+</style>
 
 ---
 clicks: 5
