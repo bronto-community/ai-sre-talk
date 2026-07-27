@@ -116,6 +116,32 @@ function spawnFrog(): Frog | null {
   }
   return null
 }
+/**
+ * The LLM's carnage is the punchline, so it can't be left to chance. Place a few
+ * frogs that will be mid-crossing exactly when the car reaches them: walk each
+ * one BACK along its route to the pond by however far it will have hopped by
+ * then, so it arrives on the tarmac on cue.
+ */
+const DOOMED: { t: number; at: number }[] = [
+  { t: 0.16, at: 700 }, { t: 0.31, at: 1350 }, { t: 0.45, at: 1950 }, { t: 0.58, at: 2520 },
+]
+function seedDoomedFrogs() {
+  for (const m of DOOMED) {
+    const s = sample(m.t)
+    if (!s) continue
+    const dx = pond.value.x - s.x, dy = pond.value.y - s.y
+    const d = Math.hypot(dx, dy) || 1
+    const back = (m.at / 520) * HOP
+    frogs.value.push({
+      id: ++frogId,
+      x: s.x - (dx / d) * back,
+      y: s.y - (dy / d) * back,
+      a: Math.atan2(dy, dx) * 180 / Math.PI + 90,
+      dead: false,
+    })
+  }
+}
+
 function refillFrogs() {
   let guard = 0
   while (frogs.value.filter(f => !f.dead).length < N_LIVE && guard++ < 10) {
@@ -229,6 +255,10 @@ function pick(p: Player) {
   progress.value = START            // always from the beginning
   wheelAngle.value = 0
   frogs.value = []                  // clear the previous run's roadkill
+  // restart the hop clock so the staged frogs' timing is predictable
+  clearInterval(hop)
+  hop = setInterval(hopFrogs, 520)
+  if (p === 'llm') seedDoomedFrogs()
   refillFrogs()
   // teleport back to A rather than driving there, and don't count that as a pass
   snap.value = true
