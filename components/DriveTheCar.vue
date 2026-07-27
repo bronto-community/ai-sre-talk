@@ -34,12 +34,14 @@ const wheelAngle = ref(0)
 const progress = ref(START)
 const car = ref({ x: -999, y: -999, a: 0 })
 
+const snap = ref(false)   // teleport, don't animate, when resetting to the start
 const carStyle = computed(() => ({
   left: car.value.x + 'px',
   top: car.value.y + 'px',
   transform: `translate(-50%,-50%) rotate(${car.value.a}deg)`,
   transition:
-    mode.value === 'gone' ? 'left 1.3s cubic-bezier(.5,0,1,.6), top 1.3s cubic-bezier(.5,0,1,.6)'
+    snap.value ? 'none'
+    : mode.value === 'gone' ? 'left 1.3s cubic-bezier(.5,0,1,.6), top 1.3s cubic-bezier(.5,0,1,.6)'
     : mode.value === 'auto' ? 'left .55s ease-in-out, top .55s ease-in-out, transform .55s ease-in-out'
     : 'left .07s linear, top .07s linear, transform .07s linear',
 }))
@@ -153,7 +155,6 @@ function distToSeg(px: number, py: number, x1: number, y1: number, x2: number, y
   return Math.hypot(px - (x1 + t * vx), py - (y1 + t * vy))
 }
 function squash(from: { x: number; y: number }, to: { x: number; y: number }) {
-  if (from.x < -900) return
   // smear the splat along the direction the car was travelling
   const dir = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI
   for (const f of frogs.value) {
@@ -164,12 +165,35 @@ function squash(from: { x: number; y: number }, to: { x: number; y: number }) {
   }
 }
 
-function place(t: number, canSquash = true) {
+function place(t: number) {
   const s = sample(t)
-  if (!s) return
-  const prev = car.value
-  car.value = s
-  if (canSquash && player.value) squash(prev, s)
+  if (s) car.value = s
+}
+
+// Collision runs off the car's RENDERED position, once per frame. Setting
+// car.value only starts a CSS transition — checking there would flatten frogs
+// up to a second before the car visibly reaches them, and the whole runaway
+// path at once. Reading the real rect keeps the squash in step with the pixels.
+const carEl = ref<HTMLElement | null>(null)
+let raf = 0
+let lastFrame: { x: number; y: number } | null = null
+let settle = 0            // frames to ignore right after a reset
+
+function trackCar() {
+  raf = requestAnimationFrame(trackCar)
+  const el = carEl.value, cont = scene.value
+  if (!el || !cont || !player.value) { lastFrame = null; return }
+  const r = el.getBoundingClientRect()
+  if (!r.width) { lastFrame = null; return }        // hidden (not started, or exploded)
+  const base = cont.getBoundingClientRect()
+  const s = base.width / cont.clientWidth || 1
+  const now = {
+    x: (r.left + r.width / 2 - base.left) / s,
+    y: (r.top + r.height / 2 - base.top) / s,
+  }
+  if (settle > 0) settle--
+  else if (lastFrame) squash(lastFrame, now)
+  lastFrame = now
 }
 
 // ── the crash ────────────────────────────────────────────────────────────
@@ -206,7 +230,12 @@ function pick(p: Player) {
   wheelAngle.value = 0
   frogs.value = []                  // clear the previous run's roadkill
   refillFrogs()
-  place(START, false)
+  // teleport back to A rather than driving there, and don't count that as a pass
+  snap.value = true
+  settle = 8
+  lastFrame = null
+  place(START)
+  nextTick(() => requestAnimationFrame(() => { snap.value = false }))
   if (p === 'human') { mode.value = 'manual'; return }
   mode.value = 'auto'
   let step = 0
@@ -224,9 +253,8 @@ function pick(p: Player) {
       const edge = exitPoint(car.value.x, car.value.y, a)
       // aim just past where it leaves the frame, so the bang lands on cue
       const run = edge ? Math.hypot(edge.x - car.value.x, edge.y - car.value.y) + 150 : 1800
-      const to = { x: car.value.x + Math.cos(a) * run, y: car.value.y + Math.sin(a) * run, a: car.value.a }
-      squash(car.value, to)          // and takes whatever is in its way with it
-      car.value = to
+      // frogs in its path get flattened as it actually passes them (see trackCar)
+      car.value = { x: car.value.x + Math.cos(a) * run, y: car.value.y + Math.sin(a) * run, a: car.value.a }
       wheelAngle.value += 1260
       if (edge) boomAt = edge
       boomTimer = setTimeout(() => { if (boomAt) boom.value = boomAt }, 1120)
@@ -397,7 +425,7 @@ let ro: ResizeObserver
 let hop: ReturnType<typeof setInterval> | undefined
 function relayout() {
   drawScene()
-  place(progress.value, false)
+  place(progress.value)
   const s0 = sample(0), s1 = sample(1)
   if (s0 && s1) marks.value = { a: { x: s0.x - 6, y: s0.y + 44 }, b: { x: s1.x + 8, y: s1.y - 42 } }
   refillFrogs()
@@ -407,9 +435,11 @@ onMounted(() => {
   ro = new ResizeObserver(relayout)
   if (scene.value) ro.observe(scene.value)
   hop = setInterval(hopFrogs, 520)
+  raf = requestAnimationFrame(trackCar)
 })
 onUnmounted(() => {
   ro?.disconnect(); clearInterval(timer); clearInterval(hop); clearTimeout(boomTimer)
+  cancelAnimationFrame(raf)
 })
 // the burst only exists in the DOM once it has gone off — draw it then
 watch(boom, v => { if (v) nextTick(drawBoom) })
@@ -456,7 +486,7 @@ watch(boom, v => { if (v) nextTick(drawBoom) })
       <span class="boom-word">BOOM</span>
     </div>
 
-    <div v-show="player && !boom" class="car" :style="carStyle">
+    <div v-show="player && !boom" ref="carEl" class="car" :style="carStyle">
       <svg ref="carSvg" viewBox="0 0 54 28" width="54" />
     </div>
 
@@ -489,7 +519,8 @@ watch(boom, v => { if (v) nextTick(drawBoom) })
       <span v-if="mode === 'idle'" class="dim">pick a driver to start from <b>A</b></span>
       <span v-else-if="mode === 'manual'" class="dim">turn the wheel to get from <b>A</b> to <b>B</b></span>
       <span v-else-if="mode === 'arrived'" class="punch">Made it — all the way to B.</span>
-      <span v-else-if="mode === 'auto'" class="dim">…so far, so good.</span>
+      <!-- hold the line until the bang actually lands -->
+      <span v-else-if="mode === 'auto' || !boom" class="dim">…so far, so good.</span>
       <span v-else class="punch apology">
         You're absolutely right — I should not have driven off the road.
       </span>
