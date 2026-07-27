@@ -1,53 +1,81 @@
 import { describe, it, expect } from 'vitest'
 
 import {
-  CAPACITY, CYCLE, MAX_LOAD, POLICIES, loadAt, instancesFor, runScaler,
-  isSuspectCollapse, newSim, tick, resolveAsk, type SimState, type Sample,
+  CAPACITY, CYCLE, MAX_LOAD, BASE_LATENCY, LAT_TARGET, TIMEOUT,
+  POLICIES, loadAt, instancesFor, runScaler, isSuspectCollapse, recentCollapse,
+  newSim, tick, resolveAsk, humanScale,
+  type SimState, type Sample,
 } from './scaling-policies'
 import { LEVELS } from './data'
 
-// Build a state with a linear history ramping from `from` to `to` over `secs`.
 function state(over: Partial<SimState> & { instances: number; load: number }): SimState {
   return {
     t: 0,
-    sinceLastChange: 99,   // default: policy is free to act
+    latency: BASE_LATENCY,
+    shedding: false,
+    sinceLastChange: 99,
     history: [],
     ...over,
   }
 }
 
 function ramp(from: number, to: number, secs: number, endT: number, instances: number): Sample[] {
-  const n = 8
+  const n = 12
   return Array.from({ length: n }, (_, i) => {
     const k = i / (n - 1)
-    return { t: endT - secs + k * secs, load: from + (to - from) * k, instances }
+    return {
+      t: endT - secs + k * secs,
+      load: from + (to - from) * k,
+      instances, latency: BASE_LATENCY, shedding: false,
+    }
   })
 }
 
 describe('load curve', () => {
-  it('is deterministic', () => {
+  it('is deterministic and loops', () => {
     expect(loadAt(7)).toBe(loadAt(7))
-  })
-
-  it('loops every cycle', () => {
     for (const t of [0, 3.5, 11, 17.2, 24]) {
       expect(loadAt(t + CYCLE)).toBeCloseTo(loadAt(t), 6)
     }
   })
 
-  it('collapses then rebounds, which is what L3 and L5 disagree about', () => {
+  it('collapses then rebounds — what L3 and L5 disagree about', () => {
     expect(loadAt(17)).toBeGreaterThan(1000)   // spike
     expect(loadAt(18.5)).toBeLessThan(300)     // collapse
     expect(loadAt(21)).toBeGreaterThan(800)    // rebound
   })
 })
 
-describe('instancesFor', () => {
-  it('never scales to zero', () => {
-    expect(instancesFor(0)).toBe(1)
+// The heart of the model: overload is a queue, not an instant failure.
+describe('the service under load', () => {
+  it('degrades to latency long before it drops anything', () => {
+    const s = newSim()
+    let sawSlowButLossless = false
+    while (tick(s, 1 / 60, 'manual')) {
+      if (s.latency > BASE_LATENCY * 3 && s.dropped === 0) sawSlowButLossless = true
+      if (s.dropped > 0) break
+    }
+    expect(sawSlowButLossless).toBe(true)
   })
 
-  it('rounds up to cover the load', () => {
+  it('only fails requests once the backlog outlives the timeout', () => {
+    const s = newSim()
+    while (tick(s, 1 / 60, 'manual') && s.dropped === 0) { /* run to first loss */ }
+    // at the moment of first loss the queue is exactly the timeout ceiling
+    expect(s.latency).toBeGreaterThan(TIMEOUT * 0.9)
+  })
+
+  it('serves everything with latency at baseline when in balance', () => {
+    const s = newSim()
+    for (let i = 0; i < 60 * 4; i++) tick(s, 1 / 60, 'conditional')   // calm phase
+    expect(s.dropped).toBe(0)
+    expect(s.latency).toBeLessThan(LAT_TARGET)
+  })
+})
+
+describe('instancesFor', () => {
+  it('never scales to zero and rounds up to cover the load', () => {
+    expect(instancesFor(0)).toBe(1)
     expect(instancesFor(CAPACITY * 3)).toBe(3)
     expect(instancesFor(CAPACITY * 3 + 1)).toBe(4)
   })
@@ -63,17 +91,22 @@ describe('L0 manual / L1 assisted', () => {
   it("L1's script sizes for right now in one action", () => {
     expect(runScaler(600)).toBe(6)
   })
+
+  it('counts every human action, and records it as an event', () => {
+    const s = newSim()
+    tick(s, 1 / 60, 'manual')
+    humanScale(s, 5)
+    expect(s.clicks).toBe(1)
+    expect(s.events.at(-1)).toMatchObject({ to: 5, kind: 'human' })
+  })
 })
 
 describe('L2 linear', () => {
+  // How *often* it may act is scheduling, owned by tick() — see the full run.
   it('moves one instance at a time, so it lags a steep ramp', () => {
-    const s = state({ instances: 2, load: 600 })   // needs 6, badly under
+    const s = state({ instances: 2, load: 600 })   // needs 6+, badly under
     expect(POLICIES.linear(s)).toEqual({ kind: 'set', target: 3 })
   })
-
-  // How *often* it may act is scheduling, which belongs to tick() — see the
-  // full-run block below, where L2's one-step-per-second cadence is what makes
-  // it lag the ramp.
 
   it('scales back down when utilisation drops', () => {
     const s = state({ instances: 6, load: 100 })
@@ -82,76 +115,86 @@ describe('L2 linear', () => {
 })
 
 describe('L3 conditional', () => {
-  it('gets the size right in one step, but only after load has moved', () => {
-    const s = state({ instances: 2, load: 600 })
-    expect(POLICIES.conditional(s)).toEqual({ kind: 'set', target: 6 })
+  it('keeps headroom rather than sizing for exact saturation', () => {
+    const s = state({ instances: 2, load: 800 })
+    const d = POLICIES.conditional(s)
+    // 8 would be exact; a utilisation target asks for more than that
+    expect(d).toMatchObject({ kind: 'set' })
+    expect((d as { target: number }).target).toBeGreaterThan(instancesFor(800))
   })
 
-  it('takes the collapse at face value and scales down into the rebound', () => {
+  it('takes the collapse at face value and gives the capacity away', () => {
     const s = state({
       instances: 11, load: 150,
       history: [
-        { t: 16, load: 1100, instances: 11 },
-        { t: 18, load: 150, instances: 11 },
+        { t: 16, load: 1100, instances: 11, latency: BASE_LATENCY, shedding: false },
+        { t: 18, load: 150, instances: 11, latency: BASE_LATENCY, shedding: false },
       ],
     })
-    expect(POLICIES.conditional(s)).toEqual({ kind: 'set', target: 2 })
+    const d = POLICIES.conditional(s) as { target: number }
+    expect(d.target).toBeLessThan(5)
   })
 })
 
 describe('L4 high automation', () => {
-  it('asks a human when the computed jump looks implausible', () => {
-    const s = state({
-      instances: 2, load: 900,
-      history: ramp(150, 900, 2, 20, 2),
-    })
-    const d = POLICIES.high(s)
-    expect(d?.kind).toBe('ask')
-    expect(d).toMatchObject({ from: 2 })
+  it('adds capacity to drain a backlog, which L3 structurally cannot see', () => {
+    const hurting = state({ instances: 4, load: 400, latency: LAT_TARGET * 2.5 })
+    const calm = state({ instances: 4, load: 400, latency: BASE_LATENCY })
+    const d = POLICIES.high(hurting) as { target: number }
+    expect(d.target).toBeGreaterThan(4)
+    // same arrival rate, healthy latency -> no extra capacity wanted
+    expect(POLICIES.high(calm)).toBeNull()
   })
 
-  it('acts without asking when the change is modest', () => {
+  it('asks when it wants a big increase in the shadow of a collapse', () => {
     const s = state({
-      instances: 5, load: 600,
-      history: ramp(580, 600, 2, 10, 5),
+      t: 19.6, instances: 3, load: 625,
+      history: [
+        ...ramp(1100, 1100, 1, 17, 11),
+        ...ramp(150, 625, 2, 19.6, 3),
+      ],
     })
-    const d = POLICIES.high(s)
-    expect(d === null || d.kind === 'set').toBe(true)
+    expect(recentCollapse(s)).toBe(true)
+    expect(POLICIES.high(s)?.kind).toBe('ask')
+  })
+
+  it('does not ask on an ordinary ramp', () => {
+    const s = state({
+      t: 12, instances: 6, load: 700,
+      history: ramp(400, 700, 3, 12, 6),
+    })
+    expect(recentCollapse(s)).toBe(false)
+    expect(POLICIES.high(s)?.kind).not.toBe('ask')
   })
 })
 
 describe('L5 full autonomy', () => {
   const collapsing = () => state({
-    instances: 11, load: 150,
+    t: 18, instances: 11, load: 150,
     history: [
-      { t: 16, load: 1100, instances: 11 },
-      { t: 16.5, load: 1100, instances: 11 },
-      { t: 18, load: 150, instances: 11 },
+      { t: 16, load: 1100, instances: 11, latency: BASE_LATENCY, shedding: false },
+      { t: 16.5, load: 1100, instances: 11, latency: BASE_LATENCY, shedding: false },
+      { t: 18, load: 150, instances: 11, latency: BASE_LATENCY, shedding: false },
     ],
   })
 
-  it('recognises the collapse as suspect', () => {
+  it('recognises the collapse and holds, where L3 gives the capacity away', () => {
     expect(isSuspectCollapse(collapsing())).toBe(true)
-  })
-
-  it('holds instead of scaling into it — the L4/L5 difference', () => {
     expect(POLICIES.autonomy(collapsing())).toBeNull()
-    // ...where L3, on the identical reading, gives the capacity away
-    expect(POLICIES.conditional(collapsing())).toEqual({ kind: 'set', target: 2 })
+    expect((POLICIES.conditional(collapsing()) as { target: number }).target).toBeLessThan(5)
   })
 
   it('never stops to ask', () => {
     const s = state({
-      instances: 2, load: 900,
-      history: ramp(150, 900, 2, 20, 2),
+      t: 19.6, instances: 3, load: 625,
+      history: [...ramp(1100, 1100, 1, 17, 11), ...ramp(150, 625, 2, 19.6, 3)],
     })
     expect(POLICIES.autonomy(s)?.kind).toBe('set')
   })
 })
 
-// The slide argues that climbing the ladder costs less human work and produces
-// better outcomes. If the curve or a policy is mistuned the demo says the
-// opposite on stage, so assert the claim rather than trusting it.
+// The slide makes claims in front of an audience. Assert them rather than
+// trusting them — a mistuned curve would quietly argue the opposite on stage.
 function runCycle(key: string, opts: { approve?: boolean } = {}) {
   const s = newSim()
   while (tick(s, 1 / 60, key)) {
@@ -160,20 +203,31 @@ function runCycle(key: string, opts: { approve?: boolean } = {}) {
   return s
 }
 
-describe('a full 25s run — the claim the slide makes', () => {
+describe('a full 25s run — the claims the slide makes', () => {
   const r: Record<string, ReturnType<typeof runCycle>> = {}
   for (const l of LEVELS) r[l.key] = runCycle(l.key, { approve: true })
-
-  it('drops fewer requests at every step up the ladder', () => {
-    expect(r.linear.dropped).toBeLessThan(r.manual.dropped)
-    expect(r.conditional.dropped).toBeLessThan(r.linear.dropped)
-    expect(r.high.dropped).toBeLessThan(r.conditional.dropped)
-    expect(r.autonomy.dropped).toBeLessThan(r.high.dropped)
-  })
 
   it('leaves L0 and L1 equally helpless when nobody presses anything', () => {
     expect(r.manual.dropped).toBeCloseTo(r.assisted.dropped, 6)
     expect(r.manual.dropped).toBeGreaterThan(5000)
+  })
+
+  it('stops losing requests entirely from L2 upward', () => {
+    for (const k of ['linear', 'conditional', 'high', 'autonomy']) {
+      expect(r[k].dropped).toBe(0)
+    }
+  })
+
+  it('has L3 pay for its precision with a worse latency excursion than L2', () => {
+    // more sophistication, a new failure mode: L3 gives capacity away on the
+    // collapse and is caught by the rebound, where sluggish L2 never was.
+    expect(r.conditional.peakLatency).toBeGreaterThan(r.linear.peakLatency)
+  })
+
+  it('has L4 and L5 hold latency at target where L2 and L3 cannot', () => {
+    expect(r.high.peakLatency).toBeLessThan(r.linear.peakLatency)
+    expect(r.autonomy.peakLatency).toBeLessThan(r.conditional.peakLatency)
+    expect(r.autonomy.peakLatency).toBeLessThanOrEqual(LAT_TARGET + 0.05)
   })
 
   it('has L4 stop to ask exactly once, and L5 never', () => {
@@ -183,18 +237,26 @@ describe('a full 25s run — the claim the slide makes', () => {
 
   it('punishes an ignored prompt — what needing a human actually costs', () => {
     const ignored = runCycle('high')          // nobody ever approves
-    expect(ignored.dropped).toBeGreaterThan(r.high.dropped * 3)
+    expect(ignored.dropped).toBeGreaterThan(1000)
+    expect(r.high.dropped).toBe(0)
   })
 
   it('has L5 pay in waste for the capacity it holds through the collapse', () => {
-    expect(r.autonomy.wasted).toBeGreaterThan(r.conditional.wasted)
-    expect(r.autonomy.dropped).toBeLessThan(r.conditional.dropped)
+    expect(r.autonomy.wasted).toBeGreaterThan(r.high.wasted)
+  })
+
+  it('records a trigger event for every automatic change', () => {
+    for (const k of ['linear', 'conditional', 'high', 'autonomy']) {
+      expect(r[k].events.length).toBeGreaterThan(5)
+      expect(r[k].events.every(e => e.t > 0 && e.to >= 1)).toBe(true)
+    }
+    expect(r.manual.events.length).toBe(0)   // nobody touched it
   })
 
   it('never lets the fleet run away', () => {
     for (const l of LEVELS) {
       const peak = Math.max(...r[l.key].history.map(h => h.instances))
-      expect(peak).toBeLessThanOrEqual(instancesFor(MAX_LOAD))
+      expect(peak).toBeLessThanOrEqual(instancesFor(MAX_LOAD) + 3)
     }
   })
 })

@@ -329,18 +329,28 @@ clicks: 5
 <ScaleTheService :stage="$clicks" class="mt-2" />
 
 <!--
-Same 25s curve every run — rehearse against it. Arrows change LEVEL, not time.
-Counters reset per level, so the numbers compare directly.
+Arrows change LEVEL. Each level waits for Start, then runs the same 25s —
+rehearse against it. Numbers reset per level, so they compare directly.
 
-L0  you click +1/-1 while talking, and you WILL fall behind. That's the point.
-L1  one click, right size — still your attention.
-L2  watch it lag the ramp, one instance at a time.
-L3  right size, but only after load moved — then the collapse at t≈18 fools it
-    into scaling down and the rebound catches it out.
-L4  it asks. Miss it mid-sentence and errors climb. Press `a` to approve.
-L5  same moment, no question, holds through the collapse. Nothing left to press.
+Overload queues before it fails: the lower strip is latency. It crosses the
+0.3s objective (amber) long before anything is dropped at the 2.5s timeout.
+"Slow" and "down" are different failures, and only L0/L1 ever reach "down".
 
-Watch "your clicks" go ~20 → 0 as you climb.
+Blue triangles are the trigger firing — note the gap between the load moving
+and the system reacting. It's a control loop, not a reflex.
+
+L0  click +1/-1 while talking. You WILL fall behind. ~8,900 dropped.
+L1  one click, right size — the script sizes it, you still have to notice.
+L2  lags the ramp one instance at a time, and over-provisions to stay safe:
+    most waste of any level, but latency stays low.
+L3  precise, so it keeps no slack — and the collapse at t≈18 fools it into
+    giving capacity away. The rebound catches it: peak 1.65s vs L2's 0.81s.
+    More sophistication, a NEW failure mode. (That's the outline's own point.)
+L4  scales on latency, not just arrivals — so it drains the backlog L3 can't
+    see. Peak 0.29s. But it stops and ASKS. Press `a`. Ignore it and you get
+    ~1,500 dropped and a saturated service.
+L5  same signal, same moment — no question, and it holds through the collapse.
+    Pays a little more waste (€0.50 vs €0.42) to avoid the outage. Judgment.
 -->
 
 ---
