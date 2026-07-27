@@ -343,11 +343,27 @@ layout: center
 class: text-center
 ---
 
-# Thank you
+<div class="thanks">
+  <div class="thanks-left">
+    <h1 class="thanks-title">Thank you</h1>
+    <div class="thanks-mail">severin@bronto.io</div>
+  </div>
 
-<div class="opacity-70 mt-2">Where does <em>your</em> team sit on the map?</div>
+  <ThanksBronto>Where does <em>your</em> team sit on the map?</ThanksBronto>
+</div>
 
-<div class="mt-8 text-sm opacity-60">severin@bronto.io</div>
+<style>
+.thanks {
+  display: flex; align-items: center; justify-content: center; gap: 3.5rem;
+  text-align: left;
+}
+.thanks-title { font-size: 4rem; line-height: 1.05; }
+.thanks-mail {
+  margin-top: 1.2rem; font-family: 'Geist Mono', monospace;
+  font-size: 1.05rem; color: var(--ink-dim);
+}
+.thanks em { font-style: italic; color: var(--sapphire); }
+</style>
 
 <!--
 Leave the map on screen for Q&A if you can — great anchor for discussion.
