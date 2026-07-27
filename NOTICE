@@ -13,28 +13,33 @@ This repository is dual-licensed:
 
 ## Trademarks
 
-**The licenses above do not grant any rights to use trademarks, service marks,
-trade names, logos, or product names.** Section 2(b)(2) of CC BY 4.0 expressly
-excludes trademark rights from the license grant, and the MIT license grants
-rights in software only.
+**The licenses above grant no trademark rights.** Section 2(b)(2) of CC BY 4.0
+expressly excludes trademark rights from the license grant, and the MIT license
+grants rights in software only. This is a limit on what the licenses convey —
+it is not a claim by us about what you may otherwise do.
 
-The following marks appear in this repository and are **excluded from both
-licenses**. They remain the property of their respective owners and are used
-here for identification and illustrative purposes only:
+Third-party marks appear in this repository **referentially**: they identify the
+actual products they name, in an illustrative architecture diagram of the kinds
+of tools an "AI SRE" agent connects to. Nothing here states or implies
+affiliation with, sponsorship by, or endorsement from any of these owners, and
+no ownership of these marks is claimed.
 
-| Mark / asset | Owner |
-| --- | --- |
-| "Bronto", the Bronto wordmark and the Bronto dinosaur character and logo — `public/img/bronto-logo.webp`, `public/img/bronto-dino.png`, `public/img/bronto-sitting.webp` | Bronto |
-| Amazon Web Services, AWS and the AWS logo — `public/img/logo-aws.svg` | Amazon Technologies, Inc. |
-| GitHub and the GitHub logo — `public/img/logo-github.svg` | GitHub, Inc. |
-| Kubernetes and the Kubernetes logo — `public/img/logo-k8s.svg` | The Linux Foundation |
-| SAE and "SAE J3016" (referenced as the source of the levels-of-driving-automation analogy) | SAE International |
-| CNCF and Cloud Native Computing Foundation | The Linux Foundation |
+Each owner's own brand guidelines govern their marks — for us and for anyone
+reusing this material:
 
-If you reuse this material under CC BY 4.0 or MIT, **you must remove or
-replace these logos and marks**, or obtain permission from their owners
-separately. Nothing here implies endorsement of, affiliation with, or
-sponsorship by any of the above.
+| Mark / asset | Owner | Guidelines |
+| --- | --- | --- |
+| "Bronto", the Bronto wordmark, and the Bronto dinosaur character, logo and illustrations — `public/img/bronto-*`, `public/img/dino-*`, `public/img/confetti-*` | Bronto | Used by the author with permission as a Bronto employee |
+| GitHub and the GitHub logo — `public/img/logo-github.svg` | GitHub, Inc. | <https://brand.github.com/foundations/logo> |
+| Kubernetes and the Kubernetes logo — `public/img/logo-k8s.svg` | The Linux Foundation | <https://www.linuxfoundation.org/legal/trademark-usage> |
+| SAE and "SAE J3016", the source of the levels-of-driving-automation analogy | SAE International | Referenced in text only |
+| CNCF and Cloud Native Computing Foundation | The Linux Foundation | <https://www.linuxfoundation.org/legal/trademark-usage> |
+| Amazon Web Services and AWS | Amazon Technologies, Inc. | <https://aws.amazon.com/trademark-guidelines/> — referenced in **plain text only**; AWS restricts logo use to parties with prior written approval |
+
+If you reuse this material under CC BY 4.0 or MIT, the trademarks do not come
+with it. Comply with each owner's guidelines in your own context — which,
+depending on how you use it, may mean replacing a logo with a plain-text
+reference or seeking permission from the owner.
 
 ## Illustrations
 

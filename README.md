@@ -44,7 +44,8 @@ Dual-licensed:
 - **Content** (`slides.md`, `OUTLINE.md`, `ABSTRACT.md`, prose) — [CC BY 4.0](LICENSE)
 - **Code** (`components/`, `data.ts`, `style.css`, config) — [MIT](LICENSE-CODE)
 
-**Trademarks and logos are excluded from both licenses.** The Bronto marks and
-dinosaur artwork, and the AWS, GitHub and Kubernetes logos, belong to their
-respective owners — if you reuse this material you must remove or replace them.
-See [NOTICE](NOTICE) for the full list and disclaimer.
+**Neither license grants trademark rights.** Third-party marks appear here
+referentially, to identify the products they name, under their owners' brand
+guidelines. If you reuse this material, the marks don't come with it — follow
+each owner's guidelines in your own context. See [NOTICE](NOTICE) for the list,
+the guideline links, and the disclaimer.
