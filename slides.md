@@ -44,12 +44,21 @@ Not here to trash "AI SRE" — cautious optimist.
 -->
 
 ---
-clicks: 4
+clicks: 5
 ---
 
 # What people mean by "AI SRE"
 
 <AISREArchSketch :stage="$clicks" class="mt-2" />
+
+<div v-click="5" class="arch-verdict">An agentic loop for incident response.</div>
+
+<style>
+.arch-verdict {
+  margin-top: 0.6rem; text-align: center;
+  font-family: 'Source Serif 4', Georgia, serif; font-size: 1.6rem; color: var(--sapphire);
+}
+</style>
 
 <!--
 Inputs on the left, the LLM in the middle, tools (mostly MCP) underneath,
@@ -226,12 +235,14 @@ layout: section
 # Levels of Service Reliability Automation
 
 ---
+clicks: 6
+---
 
 # The levels — and what moves you up one
 
-<LevelsFlow class="mt-10" />
+<LevelsFlow :stage="$clicks" class="mt-10" />
 
-<div v-click class="mt-10 draft-note">
+<div v-click="6" class="mt-6 draft-note">
 Each step up <b>adds a technique</b> — and adds complexity. It's about reaching the <b>necessary</b> level, not always the top.
 </div>
 
@@ -264,10 +275,12 @@ layout: section
 # Examples
 
 ---
+clicks: 5
+---
 
 # Example: Scaling a service
 
-<Ladder domain="resource-mgmt" class="mt-2" />
+<Ladder domain="resource-mgmt" :stage="$clicks" class="mt-2" />
 
 <!--
 Climb one rung at a time with the ▲ button (or reveal all with ↥).
@@ -275,20 +288,24 @@ The jump to L4 is where ML earns its keep: load + errors + latency + seasonality
 -->
 
 ---
+clicks: 5
+---
 
 # Example: Instrumentation
 
-<Ladder domain="instrumentation" class="mt-2" />
+<Ladder domain="instrumentation" :stage="$clicks" class="mt-2" />
 
 <!--
 Observability is part of good SRE practice. Note how far you get with zero LLMs (up to L3).
 -->
 
 ---
+clicks: 5
+---
 
 # Example: Incidents (prevention + response)
 
-<Ladder domain="incident-response" class="mt-2" />
+<Ladder domain="incident-response" :stage="$clicks" class="mt-2" />
 
 <!--
 This is the corner everyone markets. L4 is where most real products actually sit:

@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+
 import { LEVELS, DOMAINS, TRANSITIONS } from '../data'
 
-// Show one domain as a ladder you climb one step at a time.
-const props = defineProps<{ domain: string }>()
+// Show one domain as a ladder you climb one step at a time — either with the
+// buttons, or with `stage` (Slidev clicks) so the arrow keys work too.
+const props = defineProps<{ domain: string; stage?: number }>()
 
 const domain = computed(() => DOMAINS.find(d => d.key === props.domain)!)
 
-// how many rungs are revealed (0 = none, LEVELS.length = all)
+// how many rungs are revealed (1 = just L0, LEVELS.length = all)
 const shown = ref(1)
+
+// immediate, so landing on the slide mid-deck (or reloading) picks up the click count
+watch(() => props.stage, s => {
+  if (typeof s !== 'number') return
+  shown.value = Math.max(1, Math.min(LEVELS.length, s + 1))
+}, { immediate: true })
 const listEl = ref<HTMLElement | null>(null)
 
 // Keep the newest rung in view — the list scrolls inside a fixed-height box,

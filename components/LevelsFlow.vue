@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import rough from 'roughjs'
 import { LEVELS } from '../data'
 
 // Levels sit in a row; the technique each step ADDS is drawn as a hand-drawn
 // half circle looping BELOW the two levels it connects. Horizontal space is
 // tight, vertical space below is not — so the connectors go down there.
+//
+// All six levels show at once; `stage` reveals the connectors one click at a time.
+const props = withDefaults(defineProps<{ stage?: number }>(), { stage: 0 })
 const steps: Record<string, string> = {
   assisted: 'Code',
   linear: 'a trigger',
@@ -44,7 +47,8 @@ function draw() {
   })
 
   const next: Label[] = []
-  for (let i = 0; i < centers.length - 1; i++) {
+  const upTo = Math.min(props.stage, centers.length - 1)
+  for (let i = 0; i < upTo; i++) {
     const x1 = centers[i], x2 = centers[i + 1]
     const rad = (x2 - x1) / 2
     // sweep-flag 0 bows the arc downward, into the empty space under the row
@@ -66,6 +70,7 @@ onMounted(() => {
   if (root.value) ro.observe(root.value)
 })
 onUnmounted(() => ro?.disconnect())
+watch(() => props.stage, () => nextTick(draw))
 </script>
 
 <template>

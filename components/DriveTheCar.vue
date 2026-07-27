@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import rough from 'roughjs'
 import { Bot, User } from 'lucide-vue-next'
 
@@ -39,14 +39,14 @@ const carStyle = computed(() => ({
   top: car.value.y + 'px',
   transform: `translate(-50%,-50%) rotate(${car.value.a}deg)`,
   transition:
-    mode.value === 'gone' ? 'left 2s cubic-bezier(.5,0,1,.6), top 2s cubic-bezier(.5,0,1,.6)'
+    mode.value === 'gone' ? 'left 1.3s cubic-bezier(.5,0,1,.6), top 1.3s cubic-bezier(.5,0,1,.6)'
     : mode.value === 'auto' ? 'left .55s ease-in-out, top .55s ease-in-out, transform .55s ease-in-out'
     : 'left .07s linear, top .07s linear, transform .07s linear',
 }))
 const wheelStyle = computed(() => ({
   transform: `rotate(${wheelAngle.value}deg)`,
   transition:
-    mode.value === 'gone' ? 'transform 2s cubic-bezier(.5,0,1,.6)'
+    mode.value === 'gone' ? 'transform 1.3s cubic-bezier(.5,0,1,.6)'
     : mode.value === 'auto' ? 'transform .55s ease-in-out'
     : 'transform .06s linear',
 }))
@@ -172,10 +172,35 @@ function place(t: number, canSquash = true) {
   if (canSquash && player.value) squash(prev, s)
 }
 
+// ── the crash ────────────────────────────────────────────────────────────
+const boom = ref<{ x: number; y: number } | null>(null)
+const boomSvg = ref<SVGSVGElement | null>(null)
+let boomAt: { x: number; y: number } | null = null
+let boomTimer: ReturnType<typeof setTimeout> | undefined
+
+/** where a ray from (x,y) at angle `a` leaves the scene, pulled just inside */
+function exitPoint(x: number, y: number, a: number) {
+  const cont = scene.value
+  if (!cont) return null
+  const W = cont.clientWidth, H = cont.clientHeight
+  const dx = Math.cos(a), dy = Math.sin(a)
+  let best = Infinity
+  for (const t of [dx > 0 ? (W - x) / dx : dx < 0 ? -x / dx : Infinity,
+                   dy > 0 ? (H - y) / dy : dy < 0 ? -y / dy : Infinity]) {
+    if (t > 0 && t < best) best = t
+  }
+  if (!isFinite(best)) return null
+  const inset = Math.max(0, best - 84)     // keep the whole blast on screen
+  return { x: x + dx * inset, y: y + dy * inset }
+}
+
 // ── choosing a player ────────────────────────────────────────────────────
 let timer: ReturnType<typeof setInterval> | undefined
 function pick(p: Player) {
   clearInterval(timer)
+  clearTimeout(boomTimer)
+  boom.value = null
+  boomAt = null
   player.value = p
   progress.value = START            // always from the beginning
   wheelAngle.value = 0
@@ -196,10 +221,15 @@ function pick(p: Player) {
       // …then it holds its heading straight through the next bend
       mode.value = 'gone'
       const a = car.value.a * Math.PI / 180
-      const to = { x: car.value.x + Math.cos(a) * 1800, y: car.value.y + Math.sin(a) * 1800, a: car.value.a }
+      const edge = exitPoint(car.value.x, car.value.y, a)
+      // aim just past where it leaves the frame, so the bang lands on cue
+      const run = edge ? Math.hypot(edge.x - car.value.x, edge.y - car.value.y) + 150 : 1800
+      const to = { x: car.value.x + Math.cos(a) * run, y: car.value.y + Math.sin(a) * run, a: car.value.a }
       squash(car.value, to)          // and takes whatever is in its way with it
       car.value = to
       wheelAngle.value += 1260
+      if (edge) boomAt = edge
+      boomTimer = setTimeout(() => { if (boomAt) boom.value = boomAt }, 1120)
     }
   }, 620)
 }
@@ -323,6 +353,30 @@ function drawCar() {
   el.appendChild(rc.rectangle(5, 4, 44, 20, { ...o, fill: '#fff', fillStyle: 'solid' }))
   el.appendChild(rc.rectangle(33, 7, 11, 14, { ...o, strokeWidth: 1.5, fill: '#DBF9EE', fillStyle: 'solid' }))
 }
+function drawBoom() {
+  const el = boomSvg.value
+  if (!el) return
+  while (el.firstChild) el.removeChild(el.firstChild)
+  const rc = rough.svg(el)
+  // two spiky bursts, one inside the other
+  const star = (spikes: number, rOut: number, rIn: number, rot: number) => {
+    const pts: [number, number][] = []
+    for (let i = 0; i < spikes * 2; i++) {
+      const r = i % 2 ? rIn : rOut
+      const t = rot + (i * Math.PI) / spikes
+      pts.push([70 + Math.cos(t) * r, 70 + Math.sin(t) * r])
+    }
+    return pts
+  }
+  el.appendChild(rc.polygon(star(11, 66, 34, 0.15), {
+    roughness: 2.1, bowing: 1.4, strokeWidth: 2.4, stroke: '#B3400F',
+    fill: '#F5A524', fillStyle: 'solid',
+  }))
+  el.appendChild(rc.polygon(star(9, 40, 19, 0.5), {
+    roughness: 2.2, bowing: 1.3, strokeWidth: 2, stroke: '#B3400F',
+    fill: '#F5512E', fillStyle: 'solid',
+  }))
+}
 function drawWheel() {
   const el = wheelSvg.value
   if (!el) return
@@ -354,7 +408,11 @@ onMounted(() => {
   if (scene.value) ro.observe(scene.value)
   hop = setInterval(hopFrogs, 520)
 })
-onUnmounted(() => { ro?.disconnect(); clearInterval(timer); clearInterval(hop) })
+onUnmounted(() => {
+  ro?.disconnect(); clearInterval(timer); clearInterval(hop); clearTimeout(boomTimer)
+})
+// the burst only exists in the DOM once it has gone off — draw it then
+watch(boom, v => { if (v) nextTick(drawBoom) })
 </script>
 
 <template>
@@ -393,7 +451,12 @@ onUnmounted(() => { ro?.disconnect(); clearInterval(timer); clearInterval(hop) }
       </svg>
     </div>
 
-    <div v-show="player" class="car" :style="carStyle">
+    <div v-if="boom" class="boom" :style="{ left: boom.x + 'px', top: boom.y + 'px' }">
+      <svg ref="boomSvg" viewBox="0 0 140 140" width="140" />
+      <span class="boom-word">BOOM</span>
+    </div>
+
+    <div v-show="player && !boom" class="car" :style="carStyle">
       <svg ref="carSvg" viewBox="0 0 54 28" width="54" />
     </div>
 
@@ -448,6 +511,24 @@ onUnmounted(() => { ro?.disconnect(); clearInterval(timer); clearInterval(hop) }
 .frog { position: absolute; pointer-events: none; transition: left .42s ease-out, top .42s ease-out; }
 .frog.dead { transition: none; }
 .frog svg { display: block; height: auto; }
+
+.boom {
+  position: absolute; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 4;
+  display: grid; place-items: center;
+  animation: pop .32s cubic-bezier(.2,1.5,.4,1) both;
+}
+.boom svg { display: block; height: auto; grid-area: 1 / 1; }
+.boom-word {
+  grid-area: 1 / 1;
+  font-family: 'Kalam', cursive; font-weight: 700; font-size: 1.7rem;
+  color: #FFF6E5; text-shadow: 0 2px 0 #B3400F;
+  transform: rotate(-8deg);
+}
+@keyframes pop {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.25); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
 
 .car { position: absolute; will-change: left, top, transform; z-index: 2; }
 .car svg { display: block; height: auto; }

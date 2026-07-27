@@ -93,9 +93,9 @@ watch(expanded, () => nextTick(measure))
         :class="{ expanded }"
         :style="{ left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' }"
       >
-        <!-- The tag rides just above the box's top border, which always falls on an
-             unset row (“…” collapsed, Capacity Planning expanded) — so it never
-             covers a clickable cell. The box itself is click-through. -->
+        <!-- The tag hangs off the box's BOTTOM edge. Incident Response is the last
+             row, so that edge sits below the matrix — clear of every cell — and it
+             doesn't move when the box expands upward. The box itself is click-through. -->
         <button class="cb-tag" @click="expanded = !expanded">
           <span class="cb-label">“AI SRE”</span>
           <span class="cb-hint">{{ expanded ? '↑ …now prevention too' : 'click to expand ↑' }}</span>
@@ -122,7 +122,8 @@ watch(expanded, () => nextTick(measure))
 </template>
 
 <style scoped>
-.grid-wrap { display: flex; flex-direction: column; gap: 0.9rem; width: 100%; }
+/* gap leaves room for the claim tag hanging below the matrix */
+.grid-wrap { display: flex; flex-direction: column; gap: 1.6rem; width: 100%; }
 
 .matrix {
   position: relative;
@@ -174,8 +175,8 @@ watch(expanded, () => nextTick(measure))
 
 .cb-tag {
   position: absolute;
-  top: 0; left: 50%;
-  transform: translate(-50%, -52%);
+  bottom: 0; left: 50%;
+  transform: translate(-50%, 52%);
   pointer-events: auto;   /* …but the tag itself is the click target */
   cursor: pointer;
   display: flex; align-items: baseline; gap: 0.5rem; white-space: nowrap;

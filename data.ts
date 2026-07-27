@@ -74,6 +74,14 @@ export const DOMAINS: Domain[] = [
     cells: {},
   },
   {
+    // signals there are many more domains than we can fit
+    key: 'more',
+    name: '…',
+    cells: {},
+  },
+  {
+    // Prevention sits directly above Response so the "AI SRE" claim box can
+    // expand from one into the other across adjacent rows.
     key: 'incident-prevention',
     name: 'Incident Prevention',
     cells: {
@@ -84,12 +92,6 @@ export const DOMAINS: Domain[] = [
       high:        'Models spot anomalies and precursors early.',
       autonomy:    'Prevents incidents before they surface.',
     },
-  },
-  {
-    // signals there are many more domains than we can fit
-    key: 'more',
-    name: '…',
-    cells: {},
   },
   {
     key: 'incident-response',
