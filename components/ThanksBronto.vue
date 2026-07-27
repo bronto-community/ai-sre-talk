@@ -11,7 +11,9 @@ const INK = '#2B2620'
 
 // bubble box + where its tail narrows down to the dino's head
 const B = { x: 58, y: 14, w: 354, h: 138, r: 28 }
-const TAIL = { right: 214, left: 152, tipX: 96, tipY: 206 }
+// tip stops short of the head (which starts ~193px down) so it points at Bronto
+// rather than resting on him
+const TAIL = { right: 202, left: 148, tipX: 100, tipY: 180 }
 
 /** one continuous outline: rounded box with the tail spliced into its bottom edge */
 function bubblePath() {

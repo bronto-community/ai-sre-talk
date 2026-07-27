@@ -148,6 +148,8 @@ squashed. Point: control is earned, not assumed — and the failure is the inter
 -->
 
 ---
+clicks: 8
+---
 
 # A self-driving car is built from many pieces
 
@@ -168,7 +170,11 @@ squashed. Point: control is earned, not assumed — and the failure is the inter
 
 <div v-click class="closer">Autonomous driving is a thought-out combination of different kinds of automations, AI is only one of them.</div>
 
-<img src="/img/dino-van.png" class="abs-br m-6 corner-dino" />
+<VanDrive
+  :go="$clicks >= 8"
+  :forward="$slidev.nav.clicksDirection > 0"
+  @done="$slidev.nav.next()"
+/>
 
 <style>
 .blocks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 2rem; max-width: 42rem; }
@@ -182,7 +188,6 @@ squashed. Point: control is earned, not assumed — and the failure is the inter
   border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 1.1rem; font-weight: 600;
 }
 .closer { margin-top: 2.2rem; font-size: 1.4rem; font-family: 'Source Serif 4', Georgia, serif; max-width: 46rem; line-height: 1.35; }
-.corner-dino { width: 230px; height: auto; opacity: 0.9; }
 </style>
 
 <!--
@@ -206,6 +211,8 @@ class: text-center
     </a>
   </div>
 </div>
+
+<VanDrive mode="through" />
 
 <style>
 .cta {
