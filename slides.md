@@ -123,7 +123,7 @@ Not the right term, but it's what the room knows. Not being pedantic — just pr
 
 ---
 
-<h1 class="drive-title">You wouldn't put an LLM in the driver's seat.</h1>
+<h1 class="drive-title">Who's driving?</h1>
 
 <DriveTheCar class="mt-2" />
 
@@ -132,8 +132,10 @@ Not the right term, but it's what the room knows. Not being pedantic — just pr
 </style>
 
 <!--
-Let someone from the audience drive with A/D. Then drag the LLM in — it careens off screen.
-That's the point: control is earned, not assumed.
+Pick "Human" — let someone from the audience turn the wheel and get from A to B.
+Then pick "LLM": it takes the first bends fine, then holds its heading through the
+next one and leaves the road. Frogs crossing to the pond; run one over and it stays
+squashed. Point: control is earned, not assumed — and the failure is the interesting part.
 -->
 
 ---

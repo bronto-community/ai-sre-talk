@@ -3,3 +3,6 @@ dist
 .slidev
 *.log
 .DS_Store
+
+# Claude Code session transcripts (dated dumps at the repo root)
+/20??-??-??-*.txt
