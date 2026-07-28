@@ -168,7 +168,7 @@ squashed. Point: control is earned, not assumed — and the failure is the inter
 -->
 
 ---
-clicks: 8
+clicks: 10
 ---
 
 # A self-driving car is built from many pieces
@@ -179,19 +179,21 @@ clicks: 8
     <div v-click class="chip">Automatic gearbox</div>
     <div v-click class="chip">Rain sensor</div>
     <div v-click class="chip">Anti-lock brakes</div>
+    <div v-click class="chip">Door handles</div>
   </div>
   <div class="grp">
     <div class="grp-tag" style="--g:var(--mint)">AI</div>
     <div v-click class="chip">Adaptive cruise</div>
     <div v-click class="chip">Lane keeping</div>
     <div v-click class="chip">Self-parking</div>
+    <div v-click class="chip">Traffic-sign reading</div>
   </div>
 </div>
 
 <div v-click class="closer">Autonomous driving is a thought-out combination of different kinds of automations, AI is only one of them.</div>
 
 <VanDrive
-  :go="$clicks >= 8"
+  :go="$clicks >= 10"
   :forward="$slidev.nav.clicksDirection > 0"
   @done="$slidev.nav.next()"
 />
@@ -207,7 +209,8 @@ clicks: 8
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 1.1rem; font-weight: 600;
 }
-.closer { margin-top: 2.2rem; font-size: 1.4rem; font-family: 'Source Serif 4', Georgia, serif; max-width: 46rem; line-height: 1.35; }
+/* stays clear of the van parked bottom-right */
+.closer { margin-top: 1.8rem; font-size: 1.4rem; font-family: 'Source Serif 4', Georgia, serif; max-width: 38rem; line-height: 1.35; }
 </style>
 
 <!--
@@ -391,29 +394,89 @@ often fixes it, often hands a hypothesis to a human. L5 — self-healing — is 
 
 ---
 layout: center
-class: text-left
 ---
 
-# Three things to take away
+<div class="outcome">
+  <h1 class="outcome-head">Engineer the system.<br>Don't hire the agent.</h1>
 
-<div class="takeaways">
-  <div v-click class="ta"><span class="n">1</span><span>It's <b>automation</b>, not a replacement — and it's <b>Levels × Domains</b>.</span></div>
-  <div v-click class="ta"><span class="n">2</span><span>Every level up removes work but <b>adds complexity</b>. Reach the level you need.</span></div>
-  <div v-click class="ta"><span class="n">3</span><span>Full autonomy is still <b>to be done</b>.</span></div>
-</div>
-
-<div v-click class="mt-10 p-4 rounded-xl border border-[#476BFF]/50 bg-[#476BFF]/8 text-xl">
-<b>Join the CNCF white paper</b> — we're looking for contributors.
+  <div class="ev">
+    <div v-click class="ev-card">
+      <div class="i-lucide-map ev-icon" />
+      <b>The map is an instrument</b>
+      <span>Pick the level each domain actually needs — not one agent for all of it.</span>
+    </div>
+    <div v-click class="ev-card">
+      <div class="i-lucide-arrow-left-right ev-icon" />
+      <b>Every level up swaps one failure mode for another</b>
+      <span>L2 drops requests · L3 has no slack · L4 needs a guardrail and pages you.</span>
+    </div>
+    <div v-click class="ev-card">
+      <div class="i-lucide-door-open ev-icon" />
+      <b>Sometimes the right call is not to automate</b>
+      <span>Nobody needs an AI door handle — and an automated one fails in ways the manual one can't.</span>
+    </div>
+  </div>
 </div>
 
 <style>
-.takeaways { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
-.ta { display: flex; align-items: baseline; gap: 1rem; font-size: 1.4rem; }
-.ta .n {
-  font-family: 'Source Serif 4', Georgia, serif; font-size: 1.6rem; font-weight: 700;
-  color: var(--sapphire); min-width: 1.5rem;
+.outcome { max-width: 58rem; }
+.outcome-head {
+  font-size: 2.9rem; line-height: 1.08; margin-bottom: 2.2rem;
 }
+.ev { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+.ev-card {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.1rem 1.15rem;
+}
+.ev-icon { font-size: 1.5rem; color: var(--sapphire); }
+.ev-card b { font-size: 1.05rem; line-height: 1.25; }
+.ev-card span { font-size: 0.9rem; color: var(--ink-dim); line-height: 1.4; }
 </style>
+
+<!--
+This is the payoff of Parts two and three. The map is the instrument you take
+home; the levels cost you a new failure mode each time; and the door is the one
+they'll remember — automating it is both pointless and worse than the manual part.
+
+On the door: say "reported concerns" / "regulators have started looking at it".
+Don't name a manufacturer, and don't claim there's no manual release — there
+usually is. Overstate it and someone in the room will take the point off you.
+-->
+
+---
+layout: center
+---
+
+<div class="recall">
+  <div class="recall-art"><AISREArchSketch :stage="4" /></div>
+
+  <div class="recall-body">
+    <h2 class="recall-head">So — about that&nbsp;"AI&nbsp;SRE"</h2>
+    <div class="sc-list recall-list">
+      <span>It's a <b>tool</b>. Not a replacement for you, and not for the discipline.</span>
+      <span>The blueprint is ordinary. <b>Buy one, or build your own.</b></span>
+      <span>Your job doesn't disappear — it changes. In this industry it always has.</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.recall { display: flex; align-items: center; justify-content: center; gap: 2.2rem; }
+/* the opening diagram, shrunk — a callback, not a re-read */
+.recall-art { width: 460px; height: 236px; flex-shrink: 0; overflow: hidden; }
+.recall-art > * { width: 742px; transform: scale(0.62); transform-origin: top left; }
+.recall-head { font-size: 2.1rem; margin-bottom: 1.3rem; }
+.recall-body { max-width: 26rem; }
+.recall-list span { font-size: 1.05rem; color: var(--ink); }
+.recall-list b { color: var(--sapphire); }
+</style>
+
+<!--
+Circle back to slide three. Same picture, now with the verdict: this is a tool
+you can buy or build — the pattern is not special. And the SRE in the room is
+not being automated away, the job just moves up a level. We have always done that.
+-->
 
 ---
 layout: center
@@ -424,6 +487,15 @@ class: text-center
   <div class="thanks-left">
     <h1 class="thanks-title">Thank you</h1>
     <div class="thanks-mail">severin@bronto.io</div>
+    <!-- TODO swap both hrefs for the short URLs once they exist -->
+    <div class="thanks-ctas">
+      <a class="tcta primary" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">
+        Join the white paper
+      </a>
+      <a class="tcta" href="https://bronto.io" target="_blank" rel="noopener">
+        Try Bronto
+      </a>
+    </div>
   </div>
 
   <ThanksBronto>Where does <em>your</em> team sit on the map?</ThanksBronto>
@@ -439,6 +511,7 @@ class: text-center
   margin-top: 1.2rem; font-family: 'Geist Mono', monospace;
   font-size: 1.05rem; color: var(--ink-dim);
 }
+.thanks-ctas { display: flex; gap: 0.7rem; margin-top: 1.8rem; }
 .thanks em { font-style: italic; color: var(--sapphire); }
 </style>
 

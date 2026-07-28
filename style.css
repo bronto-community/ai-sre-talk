@@ -88,6 +88,20 @@
   text-decoration: none;
 }
 
+/* Closing call-to-action buttons. Also has to out-specify `.slidev-layout a`. */
+.slidev-layout a.tcta {
+  display: inline-flex; align-items: center;
+  padding: 0.5rem 1.1rem; border-radius: 10px;
+  border: 1.5px solid var(--border); border-bottom: 1.5px solid var(--border);
+  background: var(--surface); color: var(--ink);
+  font-size: 0.98rem; font-weight: 600; text-decoration: none;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.slidev-layout a.tcta:hover { transform: translateY(-2px); }
+.slidev-layout a.tcta.primary {
+  background: var(--sapphire); border-color: var(--sapphire); color: #fff;
+}
+
 /* Small Bronto wordmark used in slide corners */
 .brand-mark {
   font-family: 'Source Serif 4', Georgia, serif;
