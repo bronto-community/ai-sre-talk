@@ -44,7 +44,8 @@ onUnmounted(() => ro?.disconnect())
       <div v-if="kicker" class="sc-kicker">{{ kicker }}</div>
       <h1 ref="titleEl" class="sc-title">{{ title }}</h1>
       <svg ref="svgEl" class="sc-rule" :height="RULE_H" />
-      <div class="sc-teaser"><slot /></div>
+      <!-- v-if, not :empty — an empty slot can still render a comment node -->
+      <div v-if="$slots.default" class="sc-teaser"><slot /></div>
     </div>
     <img v-if="art" :src="art" class="sc-art" />
   </div>

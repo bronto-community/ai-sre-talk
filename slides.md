@@ -55,13 +55,7 @@ layout: center
   kicker="Part one"
   title="Setting the scene"
   art="/img/dino-blocks.png"
->
-  <div class="sc-list">
-    <span>What people mean by "AI SRE"</span>
-    <span>Why that's a narrow slice</span>
-    <span>What self-driving cars are actually made of</span>
-  </div>
-</SectionCard>
+/>
 
 ---
 clicks: 5
@@ -315,13 +309,7 @@ layout: center
   kicker="Part three"
   title="Examples"
   art="/img/dino-scientist.png"
->
-  <div class="sc-list">
-    <span>Scaling a service</span>
-    <span>Instrumentation</span>
-    <span>Incidents</span>
-  </div>
-</SectionCard>
+/>
 
 ---
 clicks: 5
