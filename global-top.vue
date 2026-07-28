@@ -13,8 +13,7 @@ import { useNav } from '@slidev/client'
  *
  * Two layers of defence:
  *  1. hand focus back after any click, which fixes the cause deck-wide;
- *  2. a always-available click target to advance, for when something still eats
- *     the keys.
+ *  2. a hot corner that reveals prev/next, for when something still eats the keys.
  */
 const { next, prev } = useNav()
 
@@ -31,29 +30,37 @@ function releaseFocus(e: PointerEvent) {
   }, 0)
 }
 
-const hint = ref(false)
-let t: ReturnType<typeof setTimeout> | undefined
-function nudge() {
-  hint.value = true
-  clearTimeout(t)
-  t = setTimeout(() => { hint.value = false }, 1800)
+// 2 — reveal only while the pointer is in the bottom-right corner.
+// Position-driven rather than on a timer, so by the time the cursor arrives the
+// buttons are already interactive; there is no "wake it up first" race.
+const ZONE_W = 210
+const ZONE_H = 170
+const inCorner = ref(false)
+
+function trackCorner(e: MouseEvent) {
+  inCorner.value =
+    e.clientX > window.innerWidth - ZONE_W &&
+    e.clientY > window.innerHeight - ZONE_H
 }
+// pointer gone (window blur, left the page): don't leave them stranded on screen
+function hide() { inCorner.value = false }
 
 onMounted(() => {
   window.addEventListener('pointerup', releaseFocus, true)
-  window.addEventListener('mousemove', nudge, { passive: true })
+  window.addEventListener('mousemove', trackCorner, { passive: true })
+  window.addEventListener('blur', hide)
+  document.addEventListener('mouseleave', hide)
 })
 onUnmounted(() => {
   window.removeEventListener('pointerup', releaseFocus, true)
-  window.removeEventListener('mousemove', nudge)
-  clearTimeout(t)
+  window.removeEventListener('mousemove', trackCorner)
+  window.removeEventListener('blur', hide)
+  document.removeEventListener('mouseleave', hide)
 })
 </script>
 
 <template>
-  <!-- 2 — the escape hatch. Fades in on mouse movement, so it is there the moment
-       you reach for it and invisible while you are just presenting. -->
-  <div class="navsafe" :class="{ show: hint }">
+  <div class="navsafe" :class="{ show: inCorner }">
     <button class="ns-btn" title="previous slide" @click="prev()">‹</button>
     <button class="ns-btn" title="next slide" @click="next()">›</button>
   </div>
@@ -63,18 +70,19 @@ onUnmounted(() => {
 .navsafe {
   position: fixed; right: 14px; bottom: 12px; z-index: 60;
   display: flex; gap: 6px;
-  /* faint but always clickable: as an escape hatch it is useless if you have to
-     wake it up first, and it must never be the thing that is stuck */
-  opacity: 0.14;
-  transition: opacity 0.25s ease;
+  opacity: 0;
+  /* not clickable while hidden, so it can never swallow a drag meant for the
+     slide (the steering wheel sits in roughly this corner) */
+  pointer-events: none;
+  transition: opacity 0.18s ease;
 }
-.navsafe.show, .navsafe:hover { opacity: 1; }
+.navsafe.show { opacity: 1; pointer-events: auto; }
 
 .ns-btn {
   width: 30px; height: 30px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid rgba(43, 38, 32, 0.16);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(4px);
   color: #2B2620; font-size: 1.1rem; line-height: 1;
   cursor: pointer;
