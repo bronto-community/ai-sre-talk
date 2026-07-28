@@ -225,9 +225,12 @@ class: text-center
       <div class="cta-kicker">An early ask</div>
       <h2 class="cta-title">Shape the CNCF white&nbsp;paper</h2>
       <p class="cta-sub">This talk reflects a paper we're actively writing. Contributors very welcome.</p>
-      <a class="cta-link" href="https://github.com/cncf/toc/issues/1984" target="_blank">
-        github.com/cncf/toc/issues/1984
-      </a>
+      <div class="cta-foot">
+        <a class="cta-link" href="https://github.com/cncf/toc/issues/1984" target="_blank">
+          github.com/cncf/toc/issues/1984
+        </a>
+        <QrCode url="https://github.com/cncf/toc/issues/1984" :size="84" />
+      </div>
     </div>
   </div>
 </RevealAfter>
@@ -241,6 +244,7 @@ class: text-center
   border-radius: 18px; padding: 2rem 2.5rem; max-width: 46rem; margin: 0 auto;
   box-shadow: 0 20px 50px -30px rgba(43,38,32,0.4);
 }
+.cta-foot { display: flex; align-items: center; gap: 1rem; }
 .cta-dino { width: 150px; height: auto; flex-shrink: 0; }
 .cta-body { text-align: left; }
 .cta-kicker { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sapphire); }
@@ -491,13 +495,17 @@ layout: center
     </span>
   </div>
 
-  <a class="wp-url" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">
-    github.com/cncf/toc/issues/1984
-  </a>
+  <div class="wp-foot">
+    <a class="wp-url" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">
+      github.com/cncf/toc/issues/1984
+    </a>
+    <QrCode url="https://github.com/cncf/toc/issues/1984" :size="124" caption="Scan to join" />
+  </div>
 </div>
 
 <style>
 .wp { max-width: 46rem; }
+.wp-foot { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-top: 1.6rem; }
 .wp-kicker {
   font-family: 'Geist Mono', monospace; font-size: 0.85rem; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.16em; color: var(--sapphire);
@@ -505,10 +513,7 @@ layout: center
 .wp-head { font-size: 2.7rem; margin: 0.6rem 0 1.8rem; }
 .wp-list span { font-size: 1.05rem; line-height: 1.45; }
 .wp-list b { color: var(--ink); }
-.wp-url {
-  display: inline-block; margin-top: 1.9rem;
-  font-family: 'Geist Mono', monospace; font-size: 1.05rem;
-}
+.wp-url { display: inline-block; font-family: 'Geist Mono', monospace; font-size: 1.05rem; }
 </style>
 
 <!--
@@ -535,6 +540,7 @@ class: text-center
         <span class="tl-label">Try Bronto</span>
         <a class="tl-url" href="https://app.eu.bronto.io/signup" target="_blank" rel="noopener">app.eu.bronto.io/signup</a>
       </div>
+      <QrCode url="https://app.eu.bronto.io/signup" :size="104" />
     </div>
   </div>
 
@@ -551,7 +557,7 @@ class: text-center
   margin-top: 1.2rem; font-family: 'Geist Mono', monospace;
   font-size: 1.05rem; color: var(--ink-dim);
 }
-.thanks-links { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1.8rem; }
+.thanks-links { display: flex; align-items: center; gap: 1.4rem; margin-top: 1.8rem; }
 /* flex-start, or the anchor is blockified and its underline runs the full width */
 .tl { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; }
 .tl-label {
