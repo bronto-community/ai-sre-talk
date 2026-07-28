@@ -473,13 +473,12 @@ layout: center
 ---
 
 <div class="wp">
-  <div class="wp-kicker">The actual ask</div>
+  <div class="wp-kicker">Call to action</div>
   <h1 class="wp-head">Help us write the framework</h1>
 
   <div class="sc-list wp-list">
     <span>
-      It runs in the open under <b>CNCF TAG Operational Resilience</b>, with co-leads
-      from Causely, Linode, VictoriaMetrics, MercadoLibre and Mia-Platform.
+      It runs in the open, under <b>CNCF TAG Operational Resilience</b>.
     </span>
     <span>
       The point is a <b>shared vocabulary</b>. One ladder everyone can point at, so teams
@@ -487,8 +486,8 @@ layout: center
       their own.
     </span>
     <span>
-      We need <b>domain examples and review</b>, not new tools. Bring the corner of
-      reliability you know better than we do, and it goes in the paper.
+      We need <b>domain examples and review</b>. Bring the corner of reliability you
+      know better than we do, and it goes in the paper.
     </span>
   </div>
 
