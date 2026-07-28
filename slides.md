@@ -532,10 +532,6 @@ class: text-center
     <div class="thanks-mail">severin@bronto.io</div>
     <div class="thanks-links">
       <div class="tl">
-        <span class="tl-label">White paper</span>
-        <a class="tl-url" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">github.com/cncf/toc/issues/1984</a>
-      </div>
-      <div class="tl">
         <span class="tl-label">Try Bronto</span>
         <a class="tl-url" href="https://app.eu.bronto.io/signup" target="_blank" rel="noopener">app.eu.bronto.io/signup</a>
       </div>
@@ -556,7 +552,8 @@ class: text-center
   font-size: 1.05rem; color: var(--ink-dim);
 }
 .thanks-links { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1.8rem; }
-.tl { display: flex; flex-direction: column; gap: 0.1rem; }
+/* flex-start, or the anchor is blockified and its underline runs the full width */
+.tl { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; }
 .tl-label {
   font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.1em; color: var(--ink-dim);
