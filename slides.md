@@ -330,29 +330,36 @@ clicks: 5
 
 <!--
 Arrows change LEVEL. Each level waits for Start, then runs the same 25s —
-rehearse against it. Numbers reset per level, so they compare directly.
+rehearse against it. The load ahead is NOT drawn: the room can't read the
+spike coming, which is what makes watching someone play L0 worth anything.
 
 Overload queues before it fails: the lower strip is latency. It crosses the
 0.3s objective (amber) long before anything is dropped at the 2.5s timeout.
-"Slow" and "down" are different failures, and only L0/L1 ever reach "down".
+"Slow" and "down" are different failures — only L0/L1 ever reach "down".
 
-Blue triangles are the trigger firing — note the gap between the load moving
-and the system reacting. It's a control loop, not a reflex.
+Blue triangles are the trigger firing — mind the gap between the load moving
+and the system reacting. It's a control loop, not a reflex. Amber triangles
+are guardrail trips. The dashed amber lines are the min/max fleet bounds.
 
 L0  click +1/-1 while talking. You WILL fall behind. ~8,900 dropped.
 L1  one click, right size — the script sizes it, you still have to notice.
-L2  lags the ramp one instance at a time, and over-provisions to stay safe:
-    latency stays low, but it burns ~EUR 2,000/yr in idle capacity.
-L3  precise, so it keeps no slack — and the collapse at t≈18 fools it into
-    giving capacity away. The rebound catches it: peak 1.65s vs L2's 0.81s.
-    More sophistication, a NEW failure mode. (That's the outline's own point.)
-    And it's the MOST expensive: ~EUR 2,400/yr idle.
-L4  scales on latency, not just arrivals — so it drains the backlog L3 can't
-    see. Peak 0.29s, and half the bill: ~EUR 1,100/yr. But it stops and ASKS.
-    Press `a`. Ignore it and you get ~1,500 dropped and a saturated service.
-L5  same signal, same moment — no question, and it holds through the collapse.
-    ~EUR 1,325/yr: about EUR 215 MORE than L4. That's the price of the capacity
-    it refuses to give away. Judgment costs money, and it's cheap.
+L2  lags the ramp one instance at a time and over-provisions to stay safe.
+    Crude, but nothing it does is surprising.
+L3  precise, so it keeps no slack — the collapse at t~18 fools it into giving
+    capacity away and the rebound catches it: peak 1.65s, the worst of any
+    automated level. More sophistication, a NEW failure mode.
+L4  scales on latency, not just arrivals, so it drains the backlog L3 can't
+    see: peak 0.72s. But at the cliff its model extrapolates straight through
+    zero and asks for NO instances. The guardrail floors it at 2 and pages a
+    human. It doesn't fail catastrophically — it gets contained, and someone
+    now owns an alert. That's the real cost of L4: not downtime, attention.
+L5  same model, plus the judgment not to act on it: leads a ramp, never a
+    fall, and stops trusting the slope once it spots the anomaly. Never trips
+    a guardrail, never pages anyone, best latency (0.28s) AND least waste.
+
+The guardrail is the point. You don't hand a confident model the throttle;
+you bound it and get told when it hits the bound. L5 is what it takes to not
+need the bound.
 -->
 
 ---

@@ -8,20 +8,13 @@
 export const CAPACITY = 100      // req/s one instance can serve
 export const CYCLE = 25          // seconds; the curve loops
 export const MAX_LOAD = 1200     // y-axis ceiling
-// One instance for one hour — a mid-size VM. Edit to match your own bill.
-export const PRICE_PER_INSTANCE_HOUR = 0.15
-const SECONDS_PER_YEAR = 365 * 24 * 3600
+// This is a game, not a bill. Idle capacity costs a round number per
+// instance-second so the waste column lands somewhere people actually react to,
+// without pretending to forecast anything.
+export const EUR_PER_IDLE_INSTANCE_SECOND = 50
 
-/**
- * A 25-second run wastes fractions of a cent, which is not a number anybody
- * makes a decision about. Idle capacity is a standing cost, so quote it the
- * way it actually lands on a bill: what this pattern burns over a year if the
- * traffic keeps looking like this.
- */
-export function annualWaste(idleInstanceSeconds: number): number {
-  const perYear = idleInstanceSeconds * (SECONDS_PER_YEAR / CYCLE)
-  return (perYear / 3600) * PRICE_PER_INSTANCE_HOUR
-}
+export const wasteCost = (idleInstanceSeconds: number) =>
+  idleInstanceSeconds * EUR_PER_IDLE_INSTANCE_SECOND
 
 // Overload does not drop requests, it queues them. Requests only fail once
 // they have waited longer than the client is willing to wait. This is the
@@ -43,7 +36,7 @@ const PHASES: [number, number][] = [
   [9, 600], [12, 600],      // ramp — L2's ±1 cannot keep pace
   [13, 1100], [17, 1100],   // flash spike — L3 sizes for arrivals, not backlog
   [18, 150], [19, 150],     // collapse — L3 believes it and scales down
-  [20, 900], [22, 900],     // rebound — L4 computes a big jump and asks
+  [20, 900], [22, 900],     // rebound — L4 extrapolates it into nonsense
   [25, 200],                // decay, then loop
 ]
 
@@ -79,10 +72,7 @@ export interface SimState {
   history: Sample[]
 }
 
-export type Decision =
-  | { kind: 'set'; target: number }
-  | { kind: 'ask'; from: number; to: number }
-  | null
+export type Decision = { kind: 'set'; target: number } | null
 
 // L4/L5 scale into a ramp rather than after it by extrapolating the recent
 // slope. Slope over a 2s window, not a fixed sample count: at 60fps "the last 8
@@ -99,16 +89,18 @@ function predictedLoad(s: SimState): number {
   const span = last.t - first.t
   if (span < 0.5) return s.load          // too short a span to trust a slope
   const slope = (last.load - first.load) / span
-  // Clamped: a prediction may lead the curve, never leave the chart.
-  return Math.max(0, Math.min(MAX_LOAD, last.load + slope * LOOKAHEAD))
+  // Deliberately unbounded. Extrapolating the rebound gives an absurd number,
+  // and containing that is the guardrail's job, not the predictor's — that is
+  // the whole point of having one.
+  return Math.max(0, last.load + slope * LOOKAHEAD)
 }
 
-// Lead the ramp, never the fall. A predictive scaler that extrapolates a
-// downward slope shrinks the fleet just before the traffic comes back, which is
-// how anticipation turns a dip into an outage. Prediction only ever raises the
-// target; shrinking waits for the load to actually be gone.
+// What the model actually believes, in both directions and without a floor —
+// extrapolating a cliff asks for zero instances. Nothing here protects it from
+// itself; that is the guardrail's job, and being clamped is how the human finds
+// out the model went somewhere silly.
 function predictiveTarget(s: SimState): number {
-  return instancesFor(Math.max(s.load, predictedLoad(s)))
+  return Math.ceil(predictedLoad(s) / CAPACITY)
 }
 
 // A near-vertical collapse after sustained high load is far more likely to be a
@@ -123,16 +115,14 @@ export function isSuspectCollapse(s: SimState): boolean {
   return past.load > 600 && now.load < past.load * 0.4
 }
 
-// When a computed *increase* looks implausible enough that L4 defers to a
-// human. Implausibility is about proportion, not absolute size: tripling the
-// fleet in one step straight after a collapse looks wrong in a way that going
-// 7 → 12 up a normal ramp does not. Only increases — scaling down is cheap to
-// undo, scaling up 3× costs real money, and that asymmetry is when a real
-// system stops to ask.
-export const ASK_MIN_STEP = 3
-// Once you have answered, it stops asking again for this episode.
-const ASK_COOLDOWN = 6
-const ASK_MIN_RATIO = 1.5
+// Guardrails. Every automated level runs inside them — a floor and a ceiling on
+// the fleet, exactly like the min/max replicas on a real autoscaler. They are
+// what stops a confident model from acting on a nonsense number. When one
+// binds, the system keeps running and tells a human afterwards; it does not
+// stop and wait to be told what to do.
+export const MIN_INSTANCES = 2
+export const MAX_INSTANCES = 18
+
 const ANOMALY_MEMORY = 3
 
 /** A sharp collapse in the recent past — the pattern L5 refuses to trust. */
@@ -144,17 +134,9 @@ export function recentCollapse(s: SimState): boolean {
   return peak > 600 && trough < peak * 0.4
 }
 
-/**
- * L4 stops to ask when it wants a materially bigger fleet in the shadow of an
- * anomaly it cannot explain. It is reading the *same* signal L5 acts on — the
- * difference is the confidence to act without a human, which is precisely what
- * separates the two levels.
- */
-export function shouldAsk(s: SimState, need: number): boolean {
-  return need - s.instances >= ASK_MIN_STEP
-    && need >= s.instances * ASK_MIN_RATIO
-    && recentCollapse(s)
-}
+/** Clamp a desired fleet size into the guardrails. */
+export const withinGuardrails = (n: number) =>
+  Math.min(MAX_INSTANCES, Math.max(MIN_INSTANCES, n))
 
 // A real conditional autoscaler targets a utilisation, not saturation. Sizing
 // for exactly the arrival rate leaves no headroom, so every transient queues.
@@ -204,33 +186,33 @@ export const POLICIES: Record<string, (s: SimState) => Decision> = {
   // whether anything is being shed, on top of a predicted arrival rate: that is
   // what "load + errors + latency + seasonality" buys you, and it moves before
   // L3 does because queueing shows up in latency long before it shows up as
-  // errors. It still stops and asks when the jump looks implausible.
+  // errors. In the corner case it extrapolates wildly and the guardrail
+  // contains it — the failure of a confident model is a bounded one, plus a
+  // human who now has an alert to explain.
   high: (s) => {
-    const need = latencyAwareTarget(s)
-    if (need === s.instances) return null
-    if (shouldAsk(s, need))
-      return { kind: 'ask', from: s.instances, to: need }
-    return { kind: 'set', target: need }
+    const need = Math.max(predictiveTarget(s), backlogTarget(s))
+    return need === s.instances ? null : { kind: 'set', target: need }
   },
 
   // L5 — the same signals with no question asked, plus the judgment to
   // recognise the collapse at t≈18 instead of scaling into it.
   autonomy: (s) => {
     if (isSuspectCollapse(s)) return null
-    const need = latencyAwareTarget(s)
+    // Same model as L4, with the judgment to know when not to act on it:
+    // it will lead a ramp but never a fall, and once it recognises an anomaly
+    // it stops trusting the slope altogether. So it never asks for a number a
+    // guardrail has to catch.
+    const lead = recentCollapse(s) ? 0 : predictiveTarget(s)
+    const need = Math.max(instancesFor(s.load), lead, backlogTarget(s))
     return need === s.instances ? null : { kind: 'set', target: need }
   },
 }
 
-// Enough capacity for the traffic that is coming, plus enough to drain what is
-// already waiting. The second term is what L3 structurally cannot do.
-function latencyAwareTarget(s: SimState): number {
-  const forArrivals = predictiveTarget(s)
+// Capacity needed to drain what is already waiting. This term is what L3
+// structurally cannot see: it reads arrivals, never the queue behind them.
+function backlogTarget(s: SimState): number {
   const overshoot = s.latency / LAT_TARGET
-  const forBacklog = overshoot > 1
-    ? Math.ceil(s.instances * Math.min(overshoot, 3))   // capped: no panic scaling
-    : 0
-  return Math.max(forArrivals, forBacklog)
+  return overshoot > 1 ? Math.ceil(s.instances * Math.min(overshoot, 3)) : 0
 }
 
 /** What L1's one-shot script does: size for right now, in a single action. */
@@ -245,7 +227,15 @@ export interface ScaleEvent {
   t: number
   from: number
   to: number
-  kind: 'auto' | 'human' | 'ask'
+  kind: 'auto' | 'human' | 'guard'
+}
+
+/** A guardrail bound something. The run continues; a human hears about it. */
+export interface Alert {
+  t: number
+  wanted: number      // what the model asked for
+  capped: number      // what the guardrail allowed
+  bound: 'max' | 'min'
 }
 
 export interface Sim {
@@ -257,12 +247,10 @@ export interface Sim {
   dropped: number       // requests
   idleSeconds: number   // idle instance-seconds; see annualWaste()
   clicks: number        // human actions
-  asks: number          // times the system stopped to ask
+  alerts: Alert[]       // guardrail trips a human has to follow up on
   peakLatency: number   // s
-  sinceAsk: number      // s since the last question was raised
   sinceLastChange: number
   sinceDecision: number
-  pending: { from: number; to: number } | null
   events: ScaleEvent[]
   history: Sample[]
 }
@@ -274,12 +262,11 @@ export function newSim(): Sim {
     queue: 0,
     latency: BASE_LATENCY,
     shedding: false,
-    dropped: 0, idleSeconds: 0, clicks: 0, asks: 0,
+    dropped: 0, idleSeconds: 0, clicks: 0,
+    alerts: [],
     peakLatency: BASE_LATENCY,
-    sinceAsk: Infinity,
     sinceLastChange: 0,
     sinceDecision: 0,
-    pending: null,
     events: [],
     history: [],
   }
@@ -296,35 +283,33 @@ export function tick(s: Sim, dt: number, levelKey: string): boolean {
   const load = loadAt(s.t)
   s.sinceLastChange += dt
   s.sinceDecision += dt
-  s.sinceAsk += dt
 
-  // An unanswered question stops the machine dead. That is the point of L4.
   const due = s.sinceDecision >= (DECIDE_INTERVAL[levelKey] ?? 0)
-  if (!s.pending && due) {
+  if (due) {
     s.sinceDecision = 0
     const d = POLICIES[levelKey]({
       t: s.t, load, instances: s.instances, latency: s.latency,
       shedding: s.shedding, sinceLastChange: s.sinceLastChange, history: s.history,
     })
-    if (d?.kind === 'set') {
-      const target = Math.max(1, d.target)
+    if (d) {
+      // The guardrail binds whatever the model asked for. The system keeps
+      // running on the clamped number and raises an alert — a human finds out,
+      // and has to work out why, but nothing waits on them to answer.
+      const wanted = d.target
+      const target = withinGuardrails(wanted)
+      if (wanted !== target) {
+        s.alerts.push({
+          t: s.t, wanted, capped: target,
+          bound: wanted > target ? 'max' : 'min',
+        })
+      }
       if (target !== s.instances) {
-        s.events.push({ t: s.t, from: s.instances, to: target, kind: 'auto' })
+        s.events.push({
+          t: s.t, from: s.instances, to: target,
+          kind: wanted !== target ? 'guard' : 'auto',
+        })
         s.instances = target
         s.sinceLastChange = 0
-      }
-    } else if (d?.kind === 'ask') {
-      // Having just been told yes, it does not re-open the same question for
-      // the rest of the episode — it acts.
-      if (s.sinceAsk < ASK_COOLDOWN) {
-        s.events.push({ t: s.t, from: s.instances, to: d.to, kind: 'auto' })
-        s.instances = Math.max(1, d.to)
-        s.sinceLastChange = 0
-      } else {
-        s.pending = { from: d.from, to: d.to }
-        s.events.push({ t: s.t, from: d.from, to: d.to, kind: 'ask' })
-        s.sinceAsk = 0
-        s.asks++
       }
     }
   }
@@ -357,18 +342,6 @@ export function tick(s: Sim, dt: number, levelKey: string): boolean {
     t: s.t, load, instances: s.instances, latency: s.latency, shedding: s.shedding,
   })
   return true
-}
-
-/** Resolve a pending question. Counts as human work either way. */
-export function resolveAsk(s: Sim, ok: boolean) {
-  if (!s.pending) return
-  if (ok) {
-    s.events.push({ t: s.t, from: s.instances, to: s.pending.to, kind: 'human' })
-    s.instances = s.pending.to
-    s.sinceLastChange = 0
-  }
-  s.pending = null
-  s.clicks++
 }
 
 /** A human moving the fleet by hand (L0) or running the one-shot script (L1). */

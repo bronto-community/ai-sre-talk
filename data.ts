@@ -63,7 +63,7 @@ export const DOMAINS: Domain[] = [
       assisted:    'A one-shot script scales when you run it.',
       linear:      'High load adds an instance, low load takes one away.',
       conditional: 'Add instances proportionally to the load.',
-      high:        'ML picks scale from load, errors, latency, seasonality; asks if implausible.',
+      high:        'ML picks scale from load, errors, latency, seasonality; guardrails catch it when it is wrong.',
       autonomy:    'Decides when & how to scale, sound even in corner cases.',
     },
   },

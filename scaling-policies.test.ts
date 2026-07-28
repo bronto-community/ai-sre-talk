@@ -3,7 +3,8 @@ import { describe, it, expect } from 'vitest'
 import {
   CAPACITY, CYCLE, MAX_LOAD, BASE_LATENCY, LAT_TARGET, TIMEOUT,
   POLICIES, loadAt, instancesFor, runScaler, isSuspectCollapse, recentCollapse,
-  newSim, tick, resolveAsk, humanScale, annualWaste,
+  newSim, tick, humanScale, wasteCost, withinGuardrails,
+  MIN_INSTANCES, MAX_INSTANCES,
   type SimState, type Sample,
 } from './scaling-policies'
 import { LEVELS } from './data'
@@ -146,25 +147,14 @@ describe('L4 high automation', () => {
     expect(POLICIES.high(calm)).toBeNull()
   })
 
-  it('asks when it wants a big increase in the shadow of a collapse', () => {
+  it('extrapolates a cliff into a nonsense number, which is what guardrails are for', () => {
     const s = state({
-      t: 19.6, instances: 3, load: 625,
-      history: [
-        ...ramp(1100, 1100, 1, 17, 11),
-        ...ramp(150, 625, 2, 19.6, 3),
-      ],
+      t: 18.5, instances: 11, load: 150,
+      history: [...ramp(1100, 1100, 1, 17, 11), ...ramp(1100, 150, 1.5, 18.5, 11)],
     })
-    expect(recentCollapse(s)).toBe(true)
-    expect(POLICIES.high(s)?.kind).toBe('ask')
-  })
-
-  it('does not ask on an ordinary ramp', () => {
-    const s = state({
-      t: 12, instances: 6, load: 700,
-      history: ramp(400, 700, 3, 12, 6),
-    })
-    expect(recentCollapse(s)).toBe(false)
-    expect(POLICIES.high(s)?.kind).not.toBe('ask')
+    const want = (POLICIES.high(s) as { target: number }).target
+    expect(want).toBeLessThan(MIN_INSTANCES)          // it wants to switch off
+    expect(withinGuardrails(want)).toBe(MIN_INSTANCES) // the floor catches it
   })
 })
 
@@ -184,28 +174,28 @@ describe('L5 full autonomy', () => {
     expect((POLICIES.conditional(collapsing()) as { target: number }).target).toBeLessThan(5)
   })
 
-  it('never stops to ask', () => {
-    const s = state({
-      t: 19.6, instances: 3, load: 625,
-      history: [...ramp(1100, 1100, 1, 17, 11), ...ramp(150, 625, 2, 19.6, 3)],
+  it('leads a ramp but never a fall, so it asks for nothing a guardrail must catch', () => {
+    const falling = state({
+      t: 18.5, instances: 11, load: 150,
+      history: [...ramp(1100, 1100, 1, 17, 11), ...ramp(1100, 150, 1.5, 18.5, 11)],
     })
-    expect(POLICIES.autonomy(s)?.kind).toBe('set')
+    const d = POLICIES.autonomy(falling)
+    // it holds through a suspect collapse; if it does move, never below the floor
+    if (d) expect(d.target).toBeGreaterThanOrEqual(MIN_INSTANCES)
   })
 })
 
 // The slide makes claims in front of an audience. Assert them rather than
 // trusting them — a mistuned curve would quietly argue the opposite on stage.
-function runCycle(key: string, opts: { approve?: boolean } = {}) {
+function runCycle(key: string) {
   const s = newSim()
-  while (tick(s, 1 / 60, key)) {
-    if (s.pending && opts.approve) resolveAsk(s, true)
-  }
+  while (tick(s, 1 / 60, key)) { /* nothing blocks; guardrails handle it */ }
   return s
 }
 
 describe('a full 25s run — the claims the slide makes', () => {
   const r: Record<string, ReturnType<typeof runCycle>> = {}
-  for (const l of LEVELS) r[l.key] = runCycle(l.key, { approve: true })
+  for (const l of LEVELS) r[l.key] = runCycle(l.key)
 
   it('leaves L0 and L1 equally helpless when nobody presses anything', () => {
     expect(r.manual.dropped).toBeCloseTo(r.assisted.dropped, 6)
@@ -230,22 +220,38 @@ describe('a full 25s run — the claims the slide makes', () => {
     expect(r.autonomy.peakLatency).toBeLessThanOrEqual(LAT_TARGET + 0.05)
   })
 
-  it('has L4 stop to ask exactly once, and L5 never', () => {
-    expect(r.high.asks).toBe(1)
-    expect(r.autonomy.asks).toBe(0)
-  })
-
-  it('punishes an ignored prompt — what needing a human actually costs', () => {
-    const ignored = runCycle('high')          // nobody ever approves
-    expect(ignored.dropped).toBeGreaterThan(1000)
+  it('never blocks on a human — nothing in the run waits to be told what to do', () => {
+    // L4 is contained by guardrails and pages someone; it does not stop.
     expect(r.high.dropped).toBe(0)
+    expect(r.high.alerts.length).toBeGreaterThan(0)
   })
 
-  it('quotes waste at a scale anyone actually acts on', () => {
-    // A 25s run wastes fractions of a cent. Annualised, it is a budget line.
-    expect(annualWaste(r.conditional.idleSeconds)).toBeGreaterThan(1000)
-    expect(annualWaste(r.high.idleSeconds))
-      .toBeLessThan(annualWaste(r.conditional.idleSeconds))
+  it('trips a guardrail only where the model goes somewhere silly', () => {
+    // ordinary levels have no model to go wrong
+    for (const k of ['manual', 'assisted', 'linear', 'conditional']) {
+      expect(r[k].alerts.length).toBe(0)
+    }
+    // and every trip is the floor catching a cliff extrapolation
+    expect(r.high.alerts.every(a => a.bound === 'min')).toBe(true)
+    expect(r.high.alerts.every(a => a.capped === MIN_INSTANCES)).toBe(true)
+  })
+
+  it('has L5 apply judgment where L4 needs a guardrail', () => {
+    expect(r.autonomy.alerts.length).toBe(0)
+    expect(r.autonomy.peakLatency).toBeLessThan(r.high.peakLatency)
+  })
+
+  it('keeps every fleet inside the guardrails', () => {
+    for (const l of LEVELS) {
+      for (const h of r[l.key].history) {
+        expect(h.instances).toBeGreaterThanOrEqual(MIN_INSTANCES)
+        expect(h.instances).toBeLessThanOrEqual(MAX_INSTANCES)
+      }
+    }
+  })
+
+  it('quotes waste at a scale anyone actually reacts to', () => {
+    expect(wasteCost(r.conditional.idleSeconds)).toBeGreaterThan(1000)
   })
 
   it('charges nothing for waste at L0/L1 — they are never over-provisioned', () => {
@@ -253,10 +259,9 @@ describe('a full 25s run — the claims the slide makes', () => {
     expect(r.assisted.idleSeconds).toBe(0)
   })
 
-  it('prices L5 holding capacity through the collapse as a real premium', () => {
-    const premium = annualWaste(r.autonomy.idleSeconds) - annualWaste(r.high.idleSeconds)
-    expect(premium).toBeGreaterThan(100)          // a number worth defending
-    expect(r.autonomy.peakLatency).toBeLessThanOrEqual(r.high.peakLatency)
+  it('leaves L5 both cheaper and steadier than L4', () => {
+    expect(r.autonomy.idleSeconds).toBeLessThan(r.high.idleSeconds)
+    expect(r.autonomy.peakLatency).toBeLessThan(r.high.peakLatency)
   })
 
   it('records a trigger event for every automatic change', () => {
@@ -270,7 +275,7 @@ describe('a full 25s run — the claims the slide makes', () => {
   it('never lets the fleet run away', () => {
     for (const l of LEVELS) {
       const peak = Math.max(...r[l.key].history.map(h => h.instances))
-      expect(peak).toBeLessThanOrEqual(instancesFor(MAX_LOAD) + 3)
+      expect(peak).toBeLessThanOrEqual(MAX_INSTANCES)
     }
   })
 })

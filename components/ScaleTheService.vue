@@ -3,9 +3,9 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 
 import { LEVELS, DOMAINS, TRANSITIONS } from '../data'
 import {
-  CAPACITY, CYCLE, MAX_LOAD, TIMEOUT, LAT_TARGET,
+  CAPACITY, CYCLE, TIMEOUT, LAT_TARGET, MIN_INSTANCES, MAX_INSTANCES,
   loadAt, instancesFor, runScaler,
-  newSim, tick, resolveAsk, humanScale, annualWaste, type Sim,
+  newSim, tick, humanScale, wasteCost, type Sim,
 } from '../scaling-policies'
 
 // "Scaling a service" as something you do, not something you read. The load
@@ -23,7 +23,10 @@ const W = 1000
 const H = 200, FLOOR = 178, ROOF = 14      // load chart
 const LH = 100, LFLOOR = 82                // latency strip
 const X = (t: number) => (t / CYCLE) * W
-const Y = (v: number) => FLOOR - (v / MAX_LOAD) * (FLOOR - ROOF)
+// The y-axis tops out at the guardrail, not at peak load, so both bounds are
+// on screen and you can see how much room the model was actually given.
+const Y_MAX = MAX_INSTANCES * CAPACITY
+const Y = (v: number) => FLOOR - (Math.min(v, Y_MAX) / Y_MAX) * (FLOOR - ROOF)
 // Square-root scale: on a linear 0–2.5s axis the 0.3s objective sits at 12% of
 // the strip and the whole "it's getting slow" story happens in a few pixels.
 const LY = (v: number) =>
@@ -101,18 +104,6 @@ function scaleNow() {
   humanScale(sim, runScaler(loadAt(sim.t)))
   frame.value++
 }
-function resolve(ok: boolean) {
-  resolveAsk(sim, ok)
-  frame.value++
-}
-
-// `a` approves without hunting for the mouse — the escape hatch for being
-// mid-sentence when L4 interrupts.
-function onKey(e: KeyboardEvent) {
-  if (!visible || !sim.pending) return
-  if (e.key === 'a') { e.preventDefault(); resolve(true) }
-}
-
 const root = ref<HTMLElement | null>(null)
 let io: IntersectionObserver | null = null
 
@@ -123,24 +114,18 @@ onMounted(() => {
     { threshold: 0.1 },
   )
   if (root.value) io.observe(root.value)
-  window.addEventListener('keydown', onKey)
   raf = requestAnimationFrame(step)
 })
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(raf)
   io?.disconnect()
-  window.removeEventListener('keydown', onKey)
 })
 
 // --- derived drawing --------------------------------------------------------
-// The full curve, drawn faintly the whole time so you can point ahead on stage
-// ("watch what happens here") before the playhead reaches it.
-const ghost = computed(() => {
-  const pts: string[] = []
-  for (let x = 0; x <= CYCLE; x += 0.2) pts.push(`${X(x)},${Y(loadAt(x))}`)
-  return pts.join(' ')
-})
+// The load ahead is deliberately not drawn. It is the same curve every run, so
+// you can rehearse it, but the room should not be able to read the spike coming
+// — that is what makes watching someone play it at L0 worth anything.
 
 const loadLine = computed(() => {
   frame.value
@@ -218,9 +203,10 @@ const peakLatency = computed(() => { frame.value; return sim.peakLatency })
 const shedding = computed(() => { frame.value; return sim.shedding })
 const slow = computed(() => latency.value > LAT_TARGET)
 const dropped = computed(() => { frame.value; return sim.dropped })
-const wasted = computed(() => { frame.value; return annualWaste(sim.idleSeconds) })
+const wasted = computed(() => { frame.value; return wasteCost(sim.idleSeconds) })
 const clicks = computed(() => { frame.value; return sim.clicks })
-const pending = computed(() => { frame.value; return sim.pending })
+const alerts = computed(() => { frame.value; return sim.alerts })
+const lastAlert = computed(() => { frame.value; return sim.alerts.at(-1) ?? null })
 const boxes = computed(() => Math.min(instances.value, 16))
 const done = computed(() => { frame.value; return started.value && !running.value && sim.t > 0 })
 </script>
@@ -241,7 +227,8 @@ const done = computed(() => { frame.value; return started.value && !running.valu
 
     <div class="chartwrap">
       <svg :viewBox="`0 0 ${W} ${H}`" class="chart" preserveAspectRatio="none">
-        <polyline :points="ghost" class="ghost" />
+        <line :x1="0" :y1="Y(MAX_INSTANCES * CAPACITY)" :x2="W" :y2="Y(MAX_INSTANCES * CAPACITY)" class="rail" />
+        <line :x1="0" :y1="Y(MIN_INSTANCES * CAPACITY)" :x2="W" :y2="Y(MIN_INSTANCES * CAPACITY)" class="rail" />
         <polyline :points="capLine" class="cap-line" />
         <polyline :points="loadLine" class="load-line" />
         <!-- when a trigger fired, and what it did -->
@@ -275,13 +262,13 @@ const done = computed(() => { frame.value; return started.value && !running.valu
         <button class="startbtn" @click="reset(); start()">Run again</button>
       </div>
 
-      <div v-if="pending" class="ask">
-        <div class="ask-t">Unusual pattern</div>
-        <div class="ask-b">Scale {{ pending.from }} → {{ pending.to }} instances?</div>
-        <div class="ask-r">
-          <button class="go" @click="resolve(true)">approve <kbd>a</kbd></button>
-          <button @click="resolve(false)">deny</button>
-        </div>
+      <!-- A guardrail bound the model's answer. Nothing waits on a human; a
+           human just acquired a thing to explain. -->
+      <div v-if="lastAlert" class="notice">
+        <b>guardrail</b>
+        model wanted <b>{{ lastAlert.wanted }}</b>,
+        held at {{ lastAlert.bound }} <b>{{ lastAlert.capped }}</b>
+        <i>— you've been paged</i>
       </div>
     </div>
 
@@ -294,7 +281,7 @@ const done = computed(() => { frame.value; return started.value && !running.valu
       />
       <span class="fleet-n">{{ instances }} × instance</span>
       <span v-if="lastTrigger" class="trigpill" :class="lastTrigger.kind">
-        {{ lastTrigger.kind === 'ask' ? 'asked' : 'trigger' }}
+        {{ lastTrigger.kind === 'guard' ? 'guardrail' : 'trigger' }}
         {{ lastTrigger.from }} → {{ lastTrigger.to }}
         <i>t+{{ lastTrigger.t.toFixed(1) }}s</i>
       </span>
@@ -312,12 +299,11 @@ const done = computed(() => { frame.value; return started.value && !running.valu
         <!-- pinned to en-US: on a German machine toLocaleString() renders 3548
              as "3.548", which reads as three-point-five to an English audience -->
         <span class="stat err"><b>{{ Math.round(dropped).toLocaleString('en-US') }}</b> dropped</span>
-        <!-- a 25s run wastes fractions of a cent; the standing annual cost is
-             the number anyone actually acts on -->
         <span class="stat waste">
-          <b>€{{ Math.round(wasted).toLocaleString('en-US') }}</b> wasted/yr
+          <b>€{{ Math.round(wasted).toLocaleString('en-US') }}</b> wasted
         </span>
         <span class="stat clicks"><b>{{ clicks }}</b> your clicks</span>
+        <span v-if="alerts.length" class="stat alert"><b>{{ alerts.length }}</b> alerts</span>
       </div>
 
       <div class="ctrls">
@@ -361,17 +347,17 @@ const done = computed(() => { frame.value; return started.value && !running.valu
 .chart { height: 208px; border-radius: 10px 10px 0 0; }
 .lat { height: 104px; border-radius: 0 0 10px 10px; border-top: 1px solid var(--panel-border); }
 
-.ghost { fill: none; stroke: var(--ink-dim); stroke-width: 1.5; opacity: 0.22; stroke-dasharray: 4 5; }
 .load-line { fill: none; stroke: var(--ink); stroke-width: 2.5; }
 .cap-line { fill: none; stroke: #476BFF; stroke-width: 2; }
 .playhead { stroke: var(--accent); stroke-width: 1.5; opacity: 0.7; }
+.rail { stroke: #E8A33D; stroke-width: 1; opacity: 0.45; stroke-dasharray: 6 6; }
 
 .trig .trig-l { stroke: #476BFF; stroke-width: 1; opacity: 0.28; stroke-dasharray: 2 4; }
 .trig polygon { fill: #476BFF; opacity: 0.8; }
 .trig.human .trig-l { stroke: var(--accent); }
 .trig.human polygon { fill: var(--accent); }
-.trig.ask .trig-l { stroke: #E5484D; opacity: 0.5; }
-.trig.ask polygon { fill: #E5484D; }
+.trig.guard .trig-l { stroke: #E8A33D; opacity: 0.6; }
+.trig.guard polygon { fill: #E8A33D; }
 
 .lat-line { fill: none; stroke: #7A6F63; stroke-width: 2; }
 .lat-target { stroke: #53DFA9; stroke-width: 1.5; stroke-dasharray: 5 4; }
@@ -399,21 +385,17 @@ const done = computed(() => { frame.value; return started.value && !running.valu
 }
 .veil-h { font-size: 0.75rem; color: var(--ink-dim); }
 
-.ask {
-  position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%);
-  background: var(--panel); border: 2px solid var(--accent);
-  border-radius: 12px; padding: 0.6rem 1rem; text-align: center;
-  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.35);
+/* Non-blocking on purpose: a guardrail firing is a page, not a permission
+   prompt. The run never waits for a human. */
+.notice {
+  position: absolute; right: 10px; top: 10px;
+  background: var(--panel); border: 1px solid #E8A33D;
+  border-left: 4px solid #E8A33D;
+  border-radius: 8px; padding: 0.32rem 0.7rem; font-size: 0.78rem;
+  box-shadow: 0 10px 26px -14px rgba(0, 0, 0, 0.4);
 }
-.ask-t { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-dim); }
-.ask-b { font-weight: 700; margin: 0.2rem 0 0.45rem; }
-.ask-r { display: flex; gap: 0.4rem; justify-content: center; }
-.ask-r button {
-  border: 1px solid var(--panel-border); background: transparent; color: var(--ink);
-  border-radius: 7px; padding: 0.22rem 0.7rem; cursor: pointer; font-size: 0.85rem;
-}
-.ask-r .go { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-kbd { font-size: 0.7em; opacity: 0.8; }
+.notice b { color: #9A6512; }
+.notice i { font-style: normal; color: var(--ink-dim); }
 
 .fleet { display: flex; align-items: center; gap: 4px; margin: 0.4rem 0 0.3rem; min-height: 1.4rem; }
 .inst {
@@ -431,7 +413,7 @@ kbd { font-size: 0.7em; opacity: 0.8; }
 }
 .trigpill i { font-style: normal; opacity: 0.65; margin-left: 3px; }
 .trigpill.human { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
-.trigpill.ask { background: color-mix(in srgb, #E5484D 16%, transparent); color: #C0343A; }
+.trigpill.guard { background: color-mix(in srgb, #E8A33D 22%, transparent); color: #9A6512; }
 
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .stats { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--ink-dim); }
@@ -447,6 +429,7 @@ kbd { font-size: 0.7em; opacity: 0.8; }
 .stat.bad b { color: #E5484D; }
 .stat.err b { color: #E5484D; }
 .stat.clicks b { color: var(--accent); }
+.stat.alert b { color: #9A6512; }
 
 .ctrls { display: flex; align-items: center; gap: 5px; }
 .ctrls button {
