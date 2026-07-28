@@ -88,19 +88,19 @@
   text-decoration: none;
 }
 
-/* Closing call-to-action buttons. Also has to out-specify `.slidev-layout a`. */
-.slidev-layout a.tcta {
-  display: inline-flex; align-items: center;
-  padding: 0.5rem 1.1rem; border-radius: 10px;
-  border: 1.5px solid var(--border); border-bottom: 1.5px solid var(--border);
-  background: var(--surface); color: var(--ink);
-  font-size: 0.98rem; font-weight: 600; text-decoration: none;
-  transition: transform 0.12s ease, background 0.15s ease;
+/* Spelled-out URLs on the closing slides. The theme's dashed border-bottom on
+   every <a> reads as damage on a monospace URL, so out-specify it. */
+.slidev-layout a.tl-url,
+.slidev-layout a.wp-url {
+  font-family: 'Geist Mono', monospace;
+  color: var(--sapphire);
+  border-bottom: 1px solid color-mix(in srgb, var(--sapphire) 40%, transparent);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
 }
-.slidev-layout a.tcta:hover { transform: translateY(-2px); }
-.slidev-layout a.tcta.primary {
-  background: var(--sapphire); border-color: var(--sapphire); color: #fff;
-}
+.slidev-layout a.tl-url:hover,
+.slidev-layout a.wp-url:hover { border-bottom-color: var(--sapphire); }
+.slidev-layout a.tl-url { font-size: 1.05rem; }
 
 /* Small Bronto wordmark used in slide corners */
 .brand-mark {

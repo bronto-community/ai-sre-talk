@@ -276,7 +276,7 @@ clicks: 6
 <LevelsFlow :stage="$clicks" class="mt-10" />
 
 <div v-click="6" class="mt-6 draft-note">
-Each step up <b>adds a technique</b> — and adds complexity. It's about reaching the <b>necessary</b> level, not always the top.
+Each step up <b>adds a technique</b> and adds complexity. It's about reaching the <b>necessary</b> level, not always the top.
 </div>
 
 <!--
@@ -385,23 +385,23 @@ layout: center
 ---
 
 <div class="outcome">
-  <h1 class="outcome-head">Engineer the system.<br>Don't hire the agent.</h1>
+  <h1 class="outcome-head">Reliability is still<br>an engineering job.</h1>
 
   <div class="ev">
     <div v-click class="ev-card">
-      <div class="i-lucide-map ev-icon" />
-      <b>The map is an instrument</b>
-      <span>Pick the level each domain actually needs — not one agent for all of it.</span>
+      <div class="i-lucide-hard-hat ev-icon" />
+      <b>It isn't replacing you</b>
+      <span>An AI SRE is a tool. Not a replacement for the person, and not for the discipline.</span>
     </div>
     <div v-click class="ev-card">
-      <div class="i-lucide-arrow-left-right ev-icon" />
-      <b>Every level up swaps one failure mode for another</b>
-      <span>L2 drops requests · L3 has no slack · L4 needs a guardrail and pages you.</span>
+      <div class="i-lucide-map ev-icon" />
+      <b>The map is an instrument</b>
+      <span>Pick the level each domain actually needs, not one agent for all of it.</span>
     </div>
     <div v-click class="ev-card">
       <div class="i-lucide-door-open ev-icon" />
       <b>Sometimes the right call is not to automate</b>
-      <span>Nobody needs an AI door handle — and an automated one fails in ways the manual one can't.</span>
+      <span>Nobody needs an AI door handle, and an automated one fails in ways the manual one can't.</span>
     </div>
   </div>
 </div>
@@ -437,23 +437,22 @@ layout: center
 ---
 
 <div class="recall">
-  <div class="recall-art"><AISREArchSketch :stage="4" /></div>
+  <div class="recall-art"><AgentShape /></div>
 
   <div class="recall-body">
-    <h2 class="recall-head">So — about that&nbsp;"AI&nbsp;SRE"</h2>
+    <h2 class="recall-head">So, about that&nbsp;"AI&nbsp;SRE"</h2>
     <div class="sc-list recall-list">
-      <span>It's a <b>tool</b>. Not a replacement for you, and not for the discipline.</span>
-      <span>The blueprint is ordinary. <b>Buy one, or build your own.</b></span>
-      <span>Your job doesn't disappear — it changes. In this industry it always has.</span>
+      <span>It's <b>just another agent</b>. Input, agent, tools, output.</span>
+      <span>Which makes it the oldest decision there is: <b>buy it, or build it</b>.</span>
+      <span>It stays <b>one tool among many</b>. The name will stick, probably.</span>
     </div>
   </div>
 </div>
 
 <style>
-.recall { display: flex; align-items: center; justify-content: center; gap: 2.2rem; }
-/* the opening diagram, shrunk — a callback, not a re-read */
-.recall-art { width: 460px; height: 236px; flex-shrink: 0; overflow: hidden; }
-.recall-art > * { width: 742px; transform: scale(0.62); transform-origin: top left; }
+.recall { display: flex; align-items: center; justify-content: center; gap: 2.4rem; }
+/* the opening architecture, stripped back to the shape everyone already knows */
+.recall-art { width: 430px; flex-shrink: 0; }
 .recall-head { font-size: 2.1rem; margin-bottom: 1.3rem; }
 .recall-body { max-width: 26rem; }
 .recall-list span { font-size: 1.05rem; color: var(--ink); }
@@ -461,9 +460,66 @@ layout: center
 </style>
 
 <!--
-Circle back to slide three. Same picture, now with the verdict: this is a tool
-you can buy or build — the pattern is not special. And the SRE in the room is
-not being automated away, the job just moves up a level. We have always done that.
+Circle back to slide three, with the detail stripped away. Nothing exotic here:
+inputs go in, an agent calls tools, something comes out. That is every agent
+anyone has shipped this year, which is exactly the point. So the question isn't
+"is this magic", it's the boring old one: do we buy this or build it?
+
+The name is not going anywhere, and that's fine. Argue about the thing, not the label.
+-->
+
+---
+layout: center
+---
+
+<div class="wp">
+  <div class="wp-kicker">The actual ask</div>
+  <h1 class="wp-head">Help us write the framework</h1>
+
+  <div class="sc-list wp-list">
+    <span>
+      It runs in the open under <b>CNCF TAG Operational Resilience</b>, with co-leads
+      from Causely, Linode, VictoriaMetrics, MercadoLibre and Mia-Platform.
+    </span>
+    <span>
+      The point is a <b>shared vocabulary</b>. One ladder everyone can point at, so teams
+      can place themselves and see the next step, instead of every vendor inventing
+      their own.
+    </span>
+    <span>
+      We need <b>domain examples and review</b>, not new tools. Bring the corner of
+      reliability you know better than we do, and it goes in the paper.
+    </span>
+  </div>
+
+  <a class="wp-url" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">
+    github.com/cncf/toc/issues/1984
+  </a>
+</div>
+
+<style>
+.wp { max-width: 46rem; }
+.wp-kicker {
+  font-family: 'Geist Mono', monospace; font-size: 0.85rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.16em; color: var(--sapphire);
+}
+.wp-head { font-size: 2.7rem; margin: 0.6rem 0 1.8rem; }
+.wp-list span { font-size: 1.05rem; line-height: 1.45; }
+.wp-list b { color: var(--ink); }
+.wp-url {
+  display: inline-block; margin-top: 1.9rem;
+  font-family: 'Geist Mono', monospace; font-size: 1.05rem;
+}
+</style>
+
+<!--
+Why this paper and not another blog post: it's vendor-neutral ground. The whole
+argument of this talk falls apart if every vendor keeps shipping its own ladder,
+so the deliverable is the common language, not a tool.
+
+Ask for the thing you actually want: someone who owns capacity planning, or
+release management, to write the row they know. Those rows are empty on the map
+because nobody in the group does that job daily.
 -->
 
 ---
@@ -475,14 +531,15 @@ class: text-center
   <div class="thanks-left">
     <h1 class="thanks-title">Thank you</h1>
     <div class="thanks-mail">severin@bronto.io</div>
-    <!-- TODO swap both hrefs for the short URLs once they exist -->
-    <div class="thanks-ctas">
-      <a class="tcta primary" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">
-        Join the white paper
-      </a>
-      <a class="tcta" href="https://bronto.io" target="_blank" rel="noopener">
-        Try Bronto
-      </a>
+    <div class="thanks-links">
+      <div class="tl">
+        <span class="tl-label">White paper</span>
+        <a class="tl-url" href="https://github.com/cncf/toc/issues/1984" target="_blank" rel="noopener">github.com/cncf/toc/issues/1984</a>
+      </div>
+      <div class="tl">
+        <span class="tl-label">Try Bronto</span>
+        <a class="tl-url" href="https://app.eu.bronto.io/signup" target="_blank" rel="noopener">app.eu.bronto.io/signup</a>
+      </div>
     </div>
   </div>
 
@@ -499,7 +556,12 @@ class: text-center
   margin-top: 1.2rem; font-family: 'Geist Mono', monospace;
   font-size: 1.05rem; color: var(--ink-dim);
 }
-.thanks-ctas { display: flex; gap: 0.7rem; margin-top: 1.8rem; }
+.thanks-links { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1.8rem; }
+.tl { display: flex; flex-direction: column; gap: 0.1rem; }
+.tl-label {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--ink-dim);
+}
 .thanks em { font-style: italic; color: var(--sapphire); }
 </style>
 
