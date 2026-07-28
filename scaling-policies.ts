@@ -32,11 +32,16 @@ export const instancesFor = (load: number) =>
 // Deterministic on purpose: what you rehearse is what you present. Every phase
 // exists to make a specific level visibly fall short.
 const PHASES: [number, number][] = [
-  [0, 200], [5, 200],       // calm — every level copes
-  [9, 600], [12, 600],      // ramp — L2's ±1 cannot keep pace
-  [13, 1100], [17, 1100],   // flash spike — L3 sizes for arrivals, not backlog
-  [18, 150], [19, 150],     // collapse — L3 believes it and scales down
-  [20, 900], [22, 900],     // rebound — L4 extrapolates it into nonsense
+  [0, 200], [4, 200],       // calm — every level copes
+  [6, 1100], [16, 1100],    // steep ramp then sustained peak: +9 instances
+                            //   needed in 2s. L2 climbs one per second and is
+                            //   still under water ten seconds later, so it is
+                            //   the only automated level that actually loses
+                            //   requests. It is the step size that beats L2,
+                            //   not the reaction time — L3 jumps straight to
+                            //   the right size and stays dry.
+  [17, 150], [18, 150],     // collapse — L4's model extrapolates through zero
+  [19, 900], [22, 900],     // rebound
   [25, 200],                // decay, then loop
 ]
 

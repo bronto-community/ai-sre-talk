@@ -341,21 +341,23 @@ Blue triangles are the trigger firing — mind the gap between the load moving
 and the system reacting. It's a control loop, not a reflex. Amber triangles
 are guardrail trips. The dashed amber lines are the min/max fleet bounds.
 
-L0  click +1/-1 while talking. You WILL fall behind. ~8,900 dropped.
+L0  click +1/-1 while talking. You WILL fall behind. ~13,250 dropped.
 L1  one click, right size — the script sizes it, you still have to notice.
-L2  lags the ramp one instance at a time and over-provisions to stay safe.
-    Crude, but nothing it does is surprising.
-L3  precise, so it keeps no slack — the collapse at t~18 fools it into giving
-    capacity away and the rebound catches it: peak 1.65s, the worst of any
-    automated level. More sophistication, a NEW failure mode.
+L2  a fixed step cannot climb a steep ramp: it needs +9 instances in 2s and
+    adds one per second, still under water ten seconds later. The ONLY
+    automated level that loses requests: ~400 dropped, and the most waste.
+L3  jumps straight to the right size, so it loses nothing. But its precision
+    leaves no slack — the collapse at t~17 fools it into giving capacity away
+    and the rebound catches it: 1.65s peak, worst of the levels that stay dry.
+    More sophistication, a NEW failure mode.
 L4  scales on latency, not just arrivals, so it drains the backlog L3 can't
-    see: peak 0.72s. But at the cliff its model extrapolates straight through
-    zero and asks for NO instances. The guardrail floors it at 2 and pages a
-    human. It doesn't fail catastrophically — it gets contained, and someone
-    now owns an alert. That's the real cost of L4: not downtime, attention.
+    see: 0.72s peak. But the model runs away in BOTH directions — it wants 20
+    instances up the ramp (ceiling holds it at 18) and ZERO at the cliff
+    (floor holds it at 2). Four alerts. It doesn't fail, it gets contained,
+    and someone now owns a page. That's the real cost of L4: attention.
 L5  same model, plus the judgment not to act on it: leads a ramp, never a
     fall, and stops trusting the slope once it spots the anomaly. Never trips
-    a guardrail, never pages anyone, best latency (0.28s) AND least waste.
+    a guardrail, never pages anyone, best latency (0.24s), least waste.
 
 The guardrail is the point. You don't hand a confident model the throttle;
 you bound it and get told when it hits the bound. L5 is what it takes to not

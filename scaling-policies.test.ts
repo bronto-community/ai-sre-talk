@@ -41,8 +41,8 @@ describe('load curve', () => {
   })
 
   it('collapses then rebounds — what L3 and L5 disagree about', () => {
-    expect(loadAt(17)).toBeGreaterThan(1000)   // spike
-    expect(loadAt(18.5)).toBeLessThan(300)     // collapse
+    expect(loadAt(16)).toBeGreaterThan(1000)   // sustained peak
+    expect(loadAt(17.5)).toBeLessThan(300)     // collapse
     expect(loadAt(21)).toBeGreaterThan(800)    // rebound
   })
 })
@@ -202,22 +202,30 @@ describe('a full 25s run — the claims the slide makes', () => {
     expect(r.manual.dropped).toBeGreaterThan(5000)
   })
 
-  it('stops losing requests entirely from L2 upward', () => {
-    for (const k of ['linear', 'conditional', 'high', 'autonomy']) {
+  it('has L2 still lose requests — a fixed step cannot climb a steep ramp', () => {
+    expect(r.linear.dropped).toBeGreaterThan(0)
+    expect(r.linear.dropped).toBeLessThan(r.manual.dropped / 10)
+  })
+
+  it('stops losing requests entirely from L3 upward', () => {
+    for (const k of ['conditional', 'high', 'autonomy']) {
       expect(r[k].dropped).toBe(0)
     }
   })
 
-  it('has L3 pay for its precision with a worse latency excursion than L2', () => {
-    // more sophistication, a new failure mode: L3 gives capacity away on the
-    // collapse and is caught by the rebound, where sluggish L2 never was.
-    expect(r.conditional.peakLatency).toBeGreaterThan(r.linear.peakLatency)
+  it('leaves L3 with the worst latency of the levels that lose nothing', () => {
+    // L3 never drops, but its precision leaves no slack: it gives capacity away
+    // on the collapse and the rebound catches it. A new failure mode, bought
+    // with the sophistication that fixed L2's dropping.
+    expect(r.conditional.peakLatency).toBeGreaterThan(r.high.peakLatency)
+    expect(r.conditional.peakLatency).toBeGreaterThan(r.autonomy.peakLatency)
+    expect(r.conditional.dropped).toBe(0)
   })
 
-  it('has L4 and L5 hold latency at target where L2 and L3 cannot', () => {
+  it('has L4 and L5 hold latency where L2 and L3 cannot', () => {
     expect(r.high.peakLatency).toBeLessThan(r.linear.peakLatency)
     expect(r.autonomy.peakLatency).toBeLessThan(r.conditional.peakLatency)
-    expect(r.autonomy.peakLatency).toBeLessThanOrEqual(LAT_TARGET + 0.05)
+    expect(r.autonomy.peakLatency).toBeLessThanOrEqual(LAT_TARGET)
   })
 
   it('never blocks on a human — nothing in the run waits to be told what to do', () => {
@@ -231,9 +239,14 @@ describe('a full 25s run — the claims the slide makes', () => {
     for (const k of ['manual', 'assisted', 'linear', 'conditional']) {
       expect(r[k].alerts.length).toBe(0)
     }
-    // and every trip is the floor catching a cliff extrapolation
-    expect(r.high.alerts.every(a => a.bound === 'min')).toBe(true)
-    expect(r.high.alerts.every(a => a.capped === MIN_INSTANCES)).toBe(true)
+  })
+
+  it('catches L4 running away in BOTH directions', () => {
+    const bounds = new Set(r.high.alerts.map(a => a.bound))
+    expect(bounds.has('max')).toBe(true)   // over-provisions up the steep ramp
+    expect(bounds.has('min')).toBe(true)   // asks for zero instances at the cliff
+    expect(r.high.alerts.some(a => a.wanted < MIN_INSTANCES)).toBe(true)
+    expect(r.high.alerts.some(a => a.wanted > MAX_INSTANCES)).toBe(true)
   })
 
   it('has L5 apply judgment where L4 needs a guardrail', () => {

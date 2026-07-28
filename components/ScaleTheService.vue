@@ -95,6 +95,14 @@ function step(now: number) {
   if (guard) frame.value++
 }
 
+// Slidev ignores arrow keys while focus sits on an interactive element, so a
+// click on any button here would silently kill slide navigation until you
+// clicked the background again. One handler on the root catches every inner
+// click on the way up and hands focus back.
+function releaseFocus() {
+  (document.activeElement as HTMLElement | null)?.blur()
+}
+
 // --- human controls ---------------------------------------------------------
 function bump(n: number) {
   humanScale(sim, sim.instances + n)
@@ -212,7 +220,7 @@ const done = computed(() => { frame.value; return started.value && !running.valu
 </script>
 
 <template>
-  <div ref="root" class="scaler">
+  <div ref="root" class="scaler" @click="releaseFocus">
     <!-- level caption: keeps the ladder's teaching without the wall of text -->
     <div class="cap" :style="{ '--c': LEVELS[level].color }">
       <span class="chip" :style="{ background: LEVELS[level].color, color: LEVELS[level].ink }">
