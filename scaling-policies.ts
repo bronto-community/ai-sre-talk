@@ -8,7 +8,20 @@
 export const CAPACITY = 100      // req/s one instance can serve
 export const CYCLE = 25          // seconds; the curve loops
 export const MAX_LOAD = 1200     // y-axis ceiling
-export const COST_PER_INSTANCE_S = 0.02   // € per idle instance-second
+// One instance for one hour — a mid-size VM. Edit to match your own bill.
+export const PRICE_PER_INSTANCE_HOUR = 0.15
+const SECONDS_PER_YEAR = 365 * 24 * 3600
+
+/**
+ * A 25-second run wastes fractions of a cent, which is not a number anybody
+ * makes a decision about. Idle capacity is a standing cost, so quote it the
+ * way it actually lands on a bill: what this pattern burns over a year if the
+ * traffic keeps looking like this.
+ */
+export function annualWaste(idleInstanceSeconds: number): number {
+  const perYear = idleInstanceSeconds * (SECONDS_PER_YEAR / CYCLE)
+  return (perYear / 3600) * PRICE_PER_INSTANCE_HOUR
+}
 
 // Overload does not drop requests, it queues them. Requests only fail once
 // they have waited longer than the client is willing to wait. This is the
@@ -242,7 +255,7 @@ export interface Sim {
   latency: number       // s
   shedding: boolean     // currently failing requests
   dropped: number       // requests
-  wasted: number        // €
+  idleSeconds: number   // idle instance-seconds; see annualWaste()
   clicks: number        // human actions
   asks: number          // times the system stopped to ask
   peakLatency: number   // s
@@ -261,7 +274,7 @@ export function newSim(): Sim {
     queue: 0,
     latency: BASE_LATENCY,
     shedding: false,
-    dropped: 0, wasted: 0, clicks: 0, asks: 0,
+    dropped: 0, idleSeconds: 0, clicks: 0, asks: 0,
     peakLatency: BASE_LATENCY,
     sinceAsk: Infinity,
     sinceLastChange: 0,
@@ -338,7 +351,7 @@ export function tick(s: Sim, dt: number, levelKey: string): boolean {
 
   // Both sides are charged, so "just max it out" is not a winning move.
   const idle = s.instances - instancesFor(load)
-  if (idle > 0) s.wasted += idle * COST_PER_INSTANCE_S * dt
+  if (idle > 0) s.idleSeconds += idle * dt
 
   s.history.push({
     t: s.t, load, instances: s.instances, latency: s.latency, shedding: s.shedding,

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import {
   CAPACITY, CYCLE, MAX_LOAD, BASE_LATENCY, LAT_TARGET, TIMEOUT,
   POLICIES, loadAt, instancesFor, runScaler, isSuspectCollapse, recentCollapse,
-  newSim, tick, resolveAsk, humanScale,
+  newSim, tick, resolveAsk, humanScale, annualWaste,
   type SimState, type Sample,
 } from './scaling-policies'
 import { LEVELS } from './data'
@@ -241,8 +241,22 @@ describe('a full 25s run — the claims the slide makes', () => {
     expect(r.high.dropped).toBe(0)
   })
 
-  it('has L5 pay in waste for the capacity it holds through the collapse', () => {
-    expect(r.autonomy.wasted).toBeGreaterThan(r.high.wasted)
+  it('quotes waste at a scale anyone actually acts on', () => {
+    // A 25s run wastes fractions of a cent. Annualised, it is a budget line.
+    expect(annualWaste(r.conditional.idleSeconds)).toBeGreaterThan(1000)
+    expect(annualWaste(r.high.idleSeconds))
+      .toBeLessThan(annualWaste(r.conditional.idleSeconds))
+  })
+
+  it('charges nothing for waste at L0/L1 — they are never over-provisioned', () => {
+    expect(r.manual.idleSeconds).toBe(0)
+    expect(r.assisted.idleSeconds).toBe(0)
+  })
+
+  it('prices L5 holding capacity through the collapse as a real premium', () => {
+    const premium = annualWaste(r.autonomy.idleSeconds) - annualWaste(r.high.idleSeconds)
+    expect(premium).toBeGreaterThan(100)          // a number worth defending
+    expect(r.autonomy.peakLatency).toBeLessThanOrEqual(r.high.peakLatency)
   })
 
   it('records a trigger event for every automatic change', () => {

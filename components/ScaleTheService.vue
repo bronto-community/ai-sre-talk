@@ -5,7 +5,7 @@ import { LEVELS, DOMAINS, TRANSITIONS } from '../data'
 import {
   CAPACITY, CYCLE, MAX_LOAD, TIMEOUT, LAT_TARGET,
   loadAt, instancesFor, runScaler,
-  newSim, tick, resolveAsk, humanScale, type Sim,
+  newSim, tick, resolveAsk, humanScale, annualWaste, type Sim,
 } from '../scaling-policies'
 
 // "Scaling a service" as something you do, not something you read. The load
@@ -218,7 +218,7 @@ const peakLatency = computed(() => { frame.value; return sim.peakLatency })
 const shedding = computed(() => { frame.value; return sim.shedding })
 const slow = computed(() => latency.value > LAT_TARGET)
 const dropped = computed(() => { frame.value; return sim.dropped })
-const wasted = computed(() => { frame.value; return sim.wasted })
+const wasted = computed(() => { frame.value; return annualWaste(sim.idleSeconds) })
 const clicks = computed(() => { frame.value; return sim.clicks })
 const pending = computed(() => { frame.value; return sim.pending })
 const boxes = computed(() => Math.min(instances.value, 16))
@@ -312,7 +312,11 @@ const done = computed(() => { frame.value; return started.value && !running.valu
         <!-- pinned to en-US: on a German machine toLocaleString() renders 3548
              as "3.548", which reads as three-point-five to an English audience -->
         <span class="stat err"><b>{{ Math.round(dropped).toLocaleString('en-US') }}</b> dropped</span>
-        <span class="stat waste"><b>€ {{ wasted.toFixed(2) }}</b> wasted</span>
+        <!-- a 25s run wastes fractions of a cent; the standing annual cost is
+             the number anyone actually acts on -->
+        <span class="stat waste">
+          <b>€{{ Math.round(wasted).toLocaleString('en-US') }}</b> wasted/yr
+        </span>
         <span class="stat clicks"><b>{{ clicks }}</b> your clicks</span>
       </div>
 
@@ -431,7 +435,14 @@ kbd { font-size: 0.7em; opacity: 0.8; }
 
 .foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .stats { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--ink-dim); }
-.stat b { font-size: 0.98rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Radio Canada Big defaults to figure spacing that gives "." and "," a full
+   digit slot, rendering "€1,325" as "€1 , 325" — reads as a typo from the back
+   of a room. Force proportional figures. */
+.stat b {
+  font-size: 0.98rem; color: var(--ink);
+  font-variant-numeric: proportional-nums;
+  font-feature-settings: 'tnum' 0, 'pnum' 1;
+}
 .stat.warn b { color: #C9821F; }
 .stat.bad b { color: #E5484D; }
 .stat.err b { color: #E5484D; }

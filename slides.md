@@ -342,15 +342,17 @@ and the system reacting. It's a control loop, not a reflex.
 L0  click +1/-1 while talking. You WILL fall behind. ~8,900 dropped.
 L1  one click, right size — the script sizes it, you still have to notice.
 L2  lags the ramp one instance at a time, and over-provisions to stay safe:
-    most waste of any level, but latency stays low.
+    latency stays low, but it burns ~EUR 2,000/yr in idle capacity.
 L3  precise, so it keeps no slack — and the collapse at t≈18 fools it into
     giving capacity away. The rebound catches it: peak 1.65s vs L2's 0.81s.
     More sophistication, a NEW failure mode. (That's the outline's own point.)
+    And it's the MOST expensive: ~EUR 2,400/yr idle.
 L4  scales on latency, not just arrivals — so it drains the backlog L3 can't
-    see. Peak 0.29s. But it stops and ASKS. Press `a`. Ignore it and you get
-    ~1,500 dropped and a saturated service.
+    see. Peak 0.29s, and half the bill: ~EUR 1,100/yr. But it stops and ASKS.
+    Press `a`. Ignore it and you get ~1,500 dropped and a saturated service.
 L5  same signal, same moment — no question, and it holds through the collapse.
-    Pays a little more waste (€0.50 vs €0.42) to avoid the outage. Judgment.
+    ~EUR 1,325/yr: about EUR 215 MORE than L4. That's the price of the capacity
+    it refuses to give away. Judgment costs money, and it's cheap.
 -->
 
 ---
